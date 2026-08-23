@@ -4,7 +4,13 @@ import { test } from "node:test";
 import { skillIcons } from "@/components/sections/skills/skill-icons";
 import type { Locale } from "@/features/i18n/config";
 
-import { getSkillsContent } from "./skills";
+import {
+  foldOtherCategories,
+  getSkillsContent,
+  otherCategoryKeys,
+  otherGroupDefinitions,
+  otherTaxonomy,
+} from "./skills";
 
 const locales: Locale[] = ["en", "vi"];
 
@@ -221,6 +227,130 @@ test("agentic AI group is featured with three sub-sections and exact skills", ()
           approvedAgenticSections[index].skills,
         );
       });
+    }
+  }
+});
+
+test("fold matches by stable category_key first", () => {
+  const entries = [
+    {
+      id: "k8s",
+      name: "Kubernetes",
+      categoryKey: "devops-infrastructure",
+      categoryEn: null,
+    },
+    {
+      id: "n8n",
+      name: "n8n",
+      categoryKey: "agentic-coding-harness",
+      categoryEn: null,
+    },
+  ];
+
+  for (const locale of locales) {
+    const cards = foldOtherCategories(entries, locale);
+    const devops = cards.find((card) => card.id === "devops-infrastructure");
+    assert.ok(devops, "key-only entry lands in its group");
+    assert.ok(devops.skills.some((skill) => skill.id === "k8s"));
+
+    const agentic = cards.find((card) => card.id === "agentic-ai-development");
+    assert.ok(agentic, "agentic group renders when only sections match");
+    const harness = agentic.sections?.find(
+      (section) => section.id === "agentic-coding-harness",
+    );
+    assert.ok(harness);
+    assert.ok(harness.skills.some((skill) => skill.id === "n8n"));
+  }
+});
+
+test("fold keeps legacy English-title matching as a compatibility path", () => {
+  const entries = [
+    { id: "rest-api", name: "REST API", categoryEn: "Architecture" },
+    {
+      id: "chatgpt",
+      name: "ChatGPT",
+      categoryEn: "AI Models & Assistants",
+    },
+  ];
+
+  for (const locale of locales) {
+    const cards = foldOtherCategories(entries, locale);
+    const architecture = cards.find((card) => card.id === "architecture");
+    assert.ok(architecture?.skills.some((skill) => skill.id === "rest-api"));
+    const agentic = cards.find((card) => card.id === "agentic-ai-development");
+    const models = agentic?.sections?.find(
+      (section) => section.id === "ai-models-assistants",
+    );
+    assert.ok(models?.skills.some((skill) => skill.id === "chatgpt"));
+  }
+});
+
+test("unknown categories become distinct fallback cards; missing assignment is skipped", () => {
+  const entries = [
+    {
+      id: "mystery",
+      name: "Mystery Skill",
+      categoryKey: "not-a-real-key",
+      categoryEn: null,
+      categoryDisplay: "Mystery",
+    },
+    {
+      id: "legacy-typo",
+      name: "Legacy Typo",
+      categoryEn: "Architecure typo",
+    },
+    { id: "orphan", name: "Orphan", categoryEn: null },
+  ];
+
+  for (const locale of locales) {
+    const cards = foldOtherCategories(entries, locale);
+    const knownIds = new Set([
+      "architecture",
+      "devops-infrastructure",
+      "frontend-ux",
+      "seo-growth",
+      "workflow-collaboration",
+      "product-creative",
+      "agentic-ai-development",
+    ]);
+    for (const card of cards) {
+      if (knownIds.has(card.id)) continue;
+      assert.ok(
+        card.skills.some((skill) =>
+          ["mystery", "legacy-typo"].includes(skill.id),
+        ),
+        `unexpected card ${card.id}`,
+      );
+    }
+    const orphanStillRenders = cards.some((card) =>
+      card.skills.some((skill) => skill.id === "orphan"),
+    );
+    assert.equal(orphanStillRenders, false);
+  }
+});
+
+test("taxonomy keys stay in lockstep with group definitions", () => {
+  const definitionIds = new Set<string>();
+
+  for (const group of otherGroupDefinitions) {
+    definitionIds.add(group.id);
+    for (const section of group.sections ?? []) {
+      definitionIds.add(section.id);
+    }
+  }
+
+  assert.deepEqual(
+    [...definitionIds].sort(),
+    [...otherCategoryKeys].sort(),
+    "otherCategoryKeys and definitions must not drift",
+  );
+
+  const keys = new Set<string>();
+  for (const node of otherTaxonomy) {
+    assert.equal(keys.has(node.key), false, `duplicate key ${node.key}`);
+    keys.add(node.key);
+    if (node.kind === "section") {
+      assert.ok(node.parentKey, "sections must declare a parent group");
     }
   }
 });

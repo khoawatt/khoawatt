@@ -64,6 +64,7 @@ interface SkillRow {
   icon_key: SkillIconKey | null;
   url: string | null;
   order: number;
+  category_key?: string | null;
   skill_translations: SkillTranslation[];
 }
 
@@ -133,7 +134,7 @@ export async function getSkillsContent(
     const { data, error } = await client
       .from("skills")
       .select(
-        "id, group_key, icon_key, url, order, skill_translations(locale, name, category)",
+        "id, group_key, icon_key, url, order, category_key, skill_translations(locale, name, category)",
       )
       .order("group_key")
       .order("order")
@@ -165,6 +166,7 @@ export async function getSkillsContent(
       return {
         id: row.id,
         name: pickTranslation(row.skill_translations, "name", locale),
+        categoryKey: row.category_key ?? undefined,
         categoryEn,
         categoryDisplay:
           row.skill_translations.find((t) => t.locale === locale)?.category ??

@@ -96,6 +96,35 @@ const skillCopy = {
   },
 } as const;
 
+/** Stable taxonomy keys for Others-tab top-level groups. */
+export const otherGroupKeys = [
+  "architecture",
+  "devops-infrastructure",
+  "frontend-ux",
+  "seo-growth",
+  "workflow-collaboration",
+  "product-creative",
+  "agentic-ai-development",
+] as const;
+
+export type OtherGroupKey = (typeof otherGroupKeys)[number];
+
+/** Stable taxonomy keys for sub-sections nested inside a group. */
+export const otherSectionKeys = [
+  "ai-models-assistants",
+  "agentic-coding-harness",
+  "ai-development-capabilities",
+] as const;
+
+export type OtherSectionKey = (typeof otherSectionKeys)[number];
+
+export type OtherCategoryKey = OtherGroupKey | OtherSectionKey;
+
+export const otherCategoryKeys: ReadonlyArray<OtherCategoryKey> = [
+  ...otherGroupKeys,
+  ...otherSectionKeys,
+];
+
 interface TechStackDefinition {
   readonly id: string;
   readonly name: string;
@@ -137,13 +166,13 @@ interface OtherSkillDefinition {
 }
 
 interface OtherSectionDefinition {
-  readonly id: string;
+  readonly id: OtherSectionKey;
   readonly name: LocalizedText;
   readonly skills: ReadonlyArray<OtherSkillDefinition>;
 }
 
 interface OtherGroupDefinition {
-  readonly id: string;
+  readonly id: OtherGroupKey;
   readonly name: LocalizedText;
   readonly subtitle: LocalizedText;
   readonly featured?: boolean;
@@ -152,7 +181,7 @@ interface OtherGroupDefinition {
 }
 
 /** Owner-approved Others tab groups and subtitles (2026-08). */
-const otherGroupDefinitions: ReadonlyArray<OtherGroupDefinition> = [
+export const otherGroupDefinitions: ReadonlyArray<OtherGroupDefinition> = [
   {
     id: "architecture",
     name: { en: "Architecture", vi: "Kiến trúc" },
@@ -413,9 +442,53 @@ const otherGroupDefinitions: ReadonlyArray<OtherGroupDefinition> = [
   },
 ];
 
+/** Stable taxonomy keys for Others-tab groups and their sub-sections. */
+export interface OtherTaxonomyNode {
+  readonly key: OtherCategoryKey;
+  readonly kind: "group" | "section";
+  /** Present when kind === "section". */
+  readonly parentKey?: OtherGroupKey;
+  readonly label: LocalizedText;
+}
+
+/**
+ * Single source of truth for Others-tab taxonomy membership: stable keys plus
+ * localized labels, derived from the owner-approved group definitions so the
+ * public render and admin selectors can never drift apart.
+ */
+export const otherTaxonomy: ReadonlyArray<OtherTaxonomyNode> =
+  otherGroupDefinitions.flatMap((group) => [
+    {
+      key: group.id,
+      kind: "group" as const,
+      label: group.name,
+    },
+    ...(group.sections?.map(
+      (section): OtherTaxonomyNode => ({
+        key: section.id,
+        kind: "section" as const,
+        parentKey: group.id,
+        label: section.name,
+      }),
+    ) ?? []),
+  ]);
+
+export function isOtherCategoryKey(
+  value: string | null | undefined,
+): value is OtherCategoryKey {
+  return (
+    typeof value === "string" &&
+    (otherCategoryKeys as ReadonlyArray<string>).includes(value)
+  );
+}
+
 export interface OtherCategoryEntry {
   id: string;
   name: string;
+  /** Stable taxonomy key (see otherTaxonomy); takes precedence over categoryEn. */
+  categoryKey?: string;
+  /** Legacy assignment: exact English group/section title. Kept as a
+   * compatibility path for rows not yet backfilled to category_key. */
   categoryEn: string | null;
   /** Locale-aware category label used when a category is unknown to code. */
   categoryDisplay?: string;
@@ -450,41 +523,48 @@ export function foldOtherCategories(
 
   const knownTitles = new Map<string, number>();
   const sectionIndexByTitle = new Map<string, { group: number; index: number }>();
+  const groupIndexByKey = new Map<string, number>();
+  const sectionIndexByKey = new Map<string, { group: number; index: number }>();
 
   localizedGroups.forEach((group, index) => {
     knownTitles.set(group.definition.name.en, index);
+    groupIndexByKey.set(group.definition.id, index);
 
     group.definition.sections?.forEach((section, sectionIdx) => {
       sectionIndexByTitle.set(section.name.en, { group: index, index: sectionIdx });
+      sectionIndexByKey.set(section.id, { group: index, index: sectionIdx });
     });
   });
 
   for (const entry of entries) {
-    if (!entry.categoryEn) {
-      continue;
-    }
+    if (entry.categoryKey || entry.categoryEn) {
+      const sectionTarget = entry.categoryKey
+        ? sectionIndexByKey.get(entry.categoryKey)
+        : sectionIndexByTitle.get(entry.categoryEn ?? "");
 
-    const sectionTarget = sectionIndexByTitle.get(entry.categoryEn);
+      if (sectionTarget) {
+        const target = localizedGroups[sectionTarget.group];
 
-    if (sectionTarget) {
-      const target = localizedGroups[sectionTarget.group];
+        target.card.sections?.[sectionTarget.index]?.skills.push({
+          id: entry.id,
+          name: entry.name,
+          iconKey: entry.iconKey,
+        });
+        continue;
+      }
 
-      target.card.sections?.[sectionTarget.index]?.skills.push({
-        id: entry.id,
-        name: entry.name,
-        iconKey: entry.iconKey,
-      });
-      continue;
-    }
+      const groupIndex = entry.categoryKey
+        ? groupIndexByKey.get(entry.categoryKey)
+        : knownTitles.get(entry.categoryEn ?? "");
 
-    const groupIndex = knownTitles.get(entry.categoryEn);
-
-    if (groupIndex !== undefined) {
-      localizedGroups[groupIndex].card.skills.push({
-        id: entry.id,
-        name: entry.name,
-        iconKey: entry.iconKey,
-      });
+      if (groupIndex !== undefined) {
+        localizedGroups[groupIndex].card.skills.push({
+          id: entry.id,
+          name: entry.name,
+          iconKey: entry.iconKey,
+        });
+        continue;
+      }
     }
   }
 
@@ -499,7 +579,7 @@ export function foldOtherCategories(
     })
     .map((group) => group.card);
 
-  const knownCardIds = new Set(cards.map((card) => card.id));
+  const knownCardIds = new Set<string>(cards.map((card) => card.id));
 
   const fallbackCards = buildFallbackCards(entries).filter(
     (card) => !knownCardIds.has(card.id),
@@ -514,11 +594,13 @@ function buildFallbackCards(
   const fallback = new Map<string, SkillCategoryView>();
 
   for (const entry of entries) {
-    if (!entry.categoryEn || isKnownCategoryTitle(entry.categoryEn)) {
+    const assignment = entry.categoryKey ?? entry.categoryEn;
+
+    if (!assignment || isKnownAssignment(assignment)) {
       continue;
     }
 
-    const existing = fallback.get(entry.categoryEn);
+    const existing = fallback.get(assignment);
     const skill: SkillView = {
       id: entry.id,
       name: entry.name,
@@ -528,9 +610,12 @@ function buildFallbackCards(
     if (existing) {
       existing.skills = [...existing.skills, skill];
     } else {
-      fallback.set(entry.categoryEn, {
-        id: entry.categoryEn.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-"),
-        name: entry.categoryDisplay ?? entry.categoryEn,
+      fallback.set(assignment, {
+        id: assignment.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-"),
+        name:
+          entry.categoryDisplay ??
+          entry.categoryEn ??
+          assignment,
         skills: [skill],
       });
     }
@@ -539,11 +624,15 @@ function buildFallbackCards(
   return [...fallback.values()];
 }
 
-function isKnownCategoryTitle(title: string): boolean {
-  return otherGroupDefinitions.some(
-    (group) =>
-      group.name.en === title ||
-      (group.sections?.some((section) => section.name.en === title) ?? false),
+function isKnownAssignment(assignment: string): boolean {
+  return (
+    isOtherCategoryKey(assignment) ||
+    otherGroupDefinitions.some(
+      (group) =>
+        group.name.en === assignment ||
+        (group.sections?.some((section) => section.name.en === assignment) ??
+          false),
+    )
   );
 }
 
@@ -563,6 +652,7 @@ export function getSkillsContent(locale: Locale): SkillsContentView {
       const flatSkills = (group.skills ?? []).map((skill) => ({
         id: skill.id,
         name: skill.name[locale],
+        categoryKey: group.id,
         categoryEn: group.name.en,
         categoryDisplay: group.name[locale],
       }));
@@ -571,6 +661,7 @@ export function getSkillsContent(locale: Locale): SkillsContentView {
         section.skills.map((skill) => ({
           id: skill.id,
           name: skill.name[locale],
+          categoryKey: section.id,
           categoryEn: section.name.en,
           categoryDisplay: section.name[locale],
         })),

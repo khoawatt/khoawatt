@@ -251,4 +251,24 @@ insert into skill_translations (skill_id, locale, name, category) values
   ('repository-aware-development', 'en', 'Repository-aware Development', 'AI Development Capabilities'),
   ('repository-aware-development', 'vi', 'Phát triển gắn với repository', 'Năng lực phát triển AI');
 
+-- Stable taxonomy keys on the base rows (mirrors migration
+-- 20260823090000_skill_category_keys.sql; labels stay code-owned).
+update skills s
+set category_key = case t.category
+  when 'Architecture' then 'architecture'
+  when 'DevOps & Infrastructure' then 'devops-infrastructure'
+  when 'Frontend & UX' then 'frontend-ux'
+  when 'SEO & Growth' then 'seo-growth'
+  when 'Workflow & Collaboration' then 'workflow-collaboration'
+  when 'Product & Creative' then 'product-creative'
+  when 'AI Models & Assistants' then 'ai-models-assistants'
+  when 'Agentic Coding & Harness' then 'agentic-coding-harness'
+  when 'AI Development Capabilities' then 'ai-development-capabilities'
+  else null
+end
+from skill_translations t
+where t.skill_id = s.id
+  and t.locale = 'en'
+  and s.group_key = 'others';
+
 commit;
