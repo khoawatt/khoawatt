@@ -11,7 +11,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "tsx --test src/content/*.test.ts src/features/contact/*.test.ts src/features/newsletter/*.test.ts src/features/seo/*.test.ts src/app/api/resume-media/route.test.ts",
+    "test": "tsx --test src/content/*.test.ts src/features/contact/*.test.ts src/features/newsletter/*.test.ts src/features/seo/*.test.ts \"src/app/admin/(dashboard)/skills/skill-buckets.test.ts\" src/app/api/resume-media/route.test.ts",
     "preflight": "tsx scripts/preflight-cutover.ts",
     "seed:admin": "node scripts/seed-admin.mjs",
     "backfill": "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54331} node scripts/backfill-content.mjs",

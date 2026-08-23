@@ -1,56 +1,79 @@
 import { getServerClient } from "@/features/cms/session";
-import type { SkillGroup } from "@/content/skills";
+import { isOtherCategoryKey, type SkillGroup } from "@/content/skills";
 
-export interface AdminSkillRow {
-  id: string;
-  group: SkillGroup;
-  iconKey: string | null;
-  url: string | null;
-  order: number;
-  featured: boolean;
-  nameEn: string;
-  nameVi: string;
-  categoryEn: string | null;
-  categoryVi: string | null;
+import type { AdminSkillRow } from "./skill-buckets";
+
+export type { AdminSkillRow } from "./skill-buckets";
+
+export interface SkillListResult {
+  skills: AdminSkillRow[];
+  error?: string;
 }
 
-export async function listSkills(): Promise<AdminSkillRow[]> {
+function mapSkillRow(
+  skill: {
+    id: string;
+    group_key: string;
+    category_key: string | null;
+    icon_key: string | null;
+    url: string | null;
+    order: number;
+    featured: boolean;
+    skill_translations: Array<{ locale: string; name: string }> | null;
+  },
+): AdminSkillRow {
+  const translations = skill.skill_translations ?? [];
+  const en = translations.find((t) => t.locale === "en");
+  const vi = translations.find((t) => t.locale === "vi");
+  const categoryKey = skill.category_key;
+
+  return {
+    id: skill.id,
+    group: skill.group_key as SkillGroup,
+    categoryKey:
+      categoryKey && isOtherCategoryKey(categoryKey) ? categoryKey : null,
+    iconKey: skill.icon_key,
+    url: skill.url,
+    order: skill.order,
+    featured: skill.featured,
+    nameEn: en?.name ?? "",
+    nameVi: vi?.name ?? "",
+  };
+}
+
+export async function listSkills(): Promise<SkillListResult> {
   const client = await getServerClient();
 
   const { data, error } = await client
     .from("skills")
-    .select("id, group_key, icon_key, url, order, featured, skill_translations(locale, name, category)")
+    .select("id, group_key, category_key, icon_key, url, order, featured, skill_translations(locale, name)")
     .order("group_key")
     .order("order")
     .order("id");
 
-  if (error || !data) return [];
+  if (error || !data) {
+    return { skills: [], error: error?.message ?? "Failed to load skills." };
+  }
 
-  return data.map((skill) => {
-    const translations = (skill.skill_translations ?? []) as Array<{
-      locale: string;
-      name: string;
-      category: string | null;
-    }>;
-    const en = translations.find((t) => t.locale === "en");
-    const vi = translations.find((t) => t.locale === "vi");
-
-    return {
-      id: skill.id,
-      group: skill.group_key as SkillGroup,
-      iconKey: skill.icon_key,
-      url: skill.url,
-      order: skill.order,
-      featured: skill.featured,
-      nameEn: en?.name ?? "",
-      nameVi: vi?.name ?? "",
-      categoryEn: en?.category ?? null,
-      categoryVi: vi?.category ?? null,
-    };
-  });
+  return {
+    skills: data.map((skill) =>
+      mapSkillRow(
+        skill as unknown as Parameters<typeof mapSkillRow>[0],
+      ),
+    ),
+  };
 }
 
 export async function getSkill(id: string): Promise<AdminSkillRow | null> {
-  const rows = await listSkills();
-  return rows.find((row) => row.id === id) ?? null;
+  const client = await getServerClient();
+
+  const { data, error } = await client
+    .from("skills")
+    .select("id, group_key, category_key, icon_key, url, order, featured, skill_translations(locale, name)")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return mapSkillRow(data as unknown as Parameters<typeof mapSkillRow>[0]);
 }
