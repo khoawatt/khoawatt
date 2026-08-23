@@ -4,26 +4,30 @@ type LocalizedText = Readonly<Record<Locale, string>>;
 
 export type SkillGroup = "tech-stack" | "others";
 
-export type SkillIconKey =
-  | "typescript"
-  | "javascript"
-  | "react"
-  | "nextjs"
-  | "nodejs"
-  | "nestjs"
-  | "postgresql"
-  | "wordpress"
-  | "python"
-  | "mongodb"
-  | "mysql"
-  | "docker"
-  | "aws"
-  | "digitalocean"
-  | "firebase"
-  | "azuredevops"
-  | "tailwindcss"
-  | "scss"
-  | "linux";
+/** Runtime single source for valid icon keys (admin selectors, validation). */
+export const skillIconKeys = [
+  "typescript",
+  "javascript",
+  "react",
+  "nextjs",
+  "nodejs",
+  "nestjs",
+  "postgresql",
+  "wordpress",
+  "python",
+  "mongodb",
+  "mysql",
+  "docker",
+  "aws",
+  "digitalocean",
+  "firebase",
+  "azuredevops",
+  "tailwindcss",
+  "scss",
+  "linux",
+] as const;
+
+export type SkillIconKey = (typeof skillIconKeys)[number];
 
 export interface SkillView {
   id: string;

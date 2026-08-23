@@ -4,29 +4,41 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import type { SkillGroup } from "@/content/skills";
+import {
+  otherTaxonomy,
+  skillIconKeys,
+  type OtherCategoryKey,
+  type SkillGroup,
+} from "@/content/skills";
 import type { AdminSkillRow } from "./data";
-import { createSkill, updateSkill, type SkillActionResult } from "./actions";
+import { upsertSkill, type SkillActionResult } from "./actions";
 
-const iconOptions = [
-  "typescript",
-  "javascript",
-  "react",
-  "nextjs",
-  "nodejs",
-  "nestjs",
-  "postgresql",
-  "wordpress",
-] as const;
+const groupLabels: Readonly<Record<SkillGroup, string>> = {
+  "tech-stack": "Tech Stack",
+  others: "Others",
+};
 
 interface SkillFormProps {
   existing?: AdminSkillRow;
+  /** Prefill for the create form (from a per-group Add button). */
+  defaultGroup?: SkillGroup;
+  defaultCategoryKey?: OtherCategoryKey;
 }
 
-export function SkillForm({ existing }: SkillFormProps) {
+export function SkillForm({
+  existing,
+  defaultGroup = "tech-stack",
+  defaultCategoryKey,
+}: SkillFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [group, setGroup] = useState<SkillGroup>(
+    existing?.group ?? defaultGroup,
+  );
+
+  const taxonomyGroups = otherTaxonomy.filter((node) => node.kind === "group");
+  const taxonomySections = otherTaxonomy.filter((node) => node.kind === "section");
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -38,8 +50,7 @@ export function SkillForm({ existing }: SkillFormProps) {
       nameEn: String(fd.get("nameEn") ?? ""),
       nameVi: String(fd.get("nameVi") ?? ""),
       group: String(fd.get("group") ?? "tech-stack") as SkillGroup,
-      categoryEn: String(fd.get("categoryEn") ?? ""),
-      categoryVi: String(fd.get("categoryVi") ?? ""),
+      categoryKey: String(fd.get("categoryKey") ?? "") || undefined,
       iconKey: String(fd.get("iconKey") ?? "") || undefined,
       url: String(fd.get("url") ?? ""),
       order: Number(fd.get("order") ?? 0),
@@ -47,14 +58,16 @@ export function SkillForm({ existing }: SkillFormProps) {
     };
 
     startTransition(async () => {
-      const result: SkillActionResult = existing
-        ? await updateSkill(data)
-        : await createSkill(data);
+      const result: SkillActionResult = await upsertSkill(data);
       if (result.ok) {
         router.push("/admin/skills");
         router.refresh();
       } else {
-        setError(result.fieldErrors ? Object.values(result.fieldErrors).join(" ") : (result.error ?? "Failed."));
+        setError(
+          result.fieldErrors
+            ? Object.values(result.fieldErrors).join(" ")
+            : (result.error ?? "Failed."),
+        );
       }
     });
   }
@@ -79,26 +92,50 @@ export function SkillForm({ existing }: SkillFormProps) {
 
       <label className="admin-field">
         <span>Group</span>
-        <select name="group" defaultValue={existing?.group ?? "tech-stack"}>
-          <option value="tech-stack">Tech Stack</option>
-          <option value="others">Others</option>
+        <select
+          name="group"
+          value={group}
+          onChange={(event) => setGroup(event.target.value as SkillGroup)}
+        >
+          {(Object.keys(groupLabels) as SkillGroup[]).map((key) => (
+            <option key={key} value={key}>
+              {groupLabels[key]}
+            </option>
+          ))}
         </select>
       </label>
 
-      <label className="admin-field">
-        <span>Category (EN) — Others only</span>
-        <input name="categoryEn" defaultValue={existing?.categoryEn ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Category (VI) — Others only</span>
-        <input name="categoryVi" defaultValue={existing?.categoryVi ?? ""} />
-      </label>
+      {group === "others" ? (
+        <label className="admin-field">
+          <span>Category</span>
+          <select
+            name="categoryKey"
+            defaultValue={existing?.categoryKey ?? defaultCategoryKey ?? ""}
+          >
+            <option value="">— Unassigned —</option>
+            <optgroup label="Groups">
+              {taxonomyGroups.map((node) => (
+                <option key={node.key} value={node.key}>
+                  {node.label.en}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Agentic AI sub-sections">
+              {taxonomySections.map((node) => (
+                <option key={node.key} value={node.key}>
+                  {node.label.en}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+        </label>
+      ) : null}
 
       <label className="admin-field">
         <span>Icon key</span>
         <select name="iconKey" defaultValue={existing?.iconKey ?? ""}>
           <option value="">None</option>
-          {iconOptions.map((icon) => (
+          {skillIconKeys.map((icon) => (
             <option key={icon} value={icon}>
               {icon}
             </option>
