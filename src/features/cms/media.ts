@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServerClient } from "./session";
 
-export type MediaBucket = "resume-media" | "project-media" | "portfolio";
+export type MediaBucket = "resume-media" | "project-media" | "portfolio" | "blog-media";
 
 export interface StoredObject {
   name: string;
