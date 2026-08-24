@@ -27,9 +27,10 @@ The product brief (`docs/00-product-brief.md`) lists a full blog rebuild as an M
 | Taxonomy | CMS-managed categories (topic clusters, own archive pages) + free tags on posts |
 | Tags v1 | Non-interactive chips on cards/article; drive related-posts matching; no tag archive pages |
 | Editor | Plain-Markdown textarea + server-rendered Preview (same pipeline as public site) |
-| Rendering/caching | ISR with data-cache tag `blog`; admin mutations call `revalidateTag("blog")` |
-| Slug strategy | One stable slug per post shared by both locales (`/blog/{slug}`, `/vi/blog/{slug}`) |
-| Reading time | Computed at render from `content_md`; never stored |
+| Rendering/caching | ISR with data-cache tag `blog`; admin mutations call `revalidateTag("blog")` at one choke point; freshness contract below |
+| Slug strategy | One stable slug per post shared by both locales (`/blog/{slug}`, `/vi/blog/{slug}`); changing a published post's slug is a URL change requiring a redirect entry (see §6) |
+| Published-post edits | Mutations that would remove/empty a required translation of a published post are rejected by the RPC (owner unpublishes explicitly first) |
+| Reading time | Computed at render from `content_md` via the deterministic algorithm in §5; never stored |
 
 ## 3. Data model (Supabase)
 
@@ -69,9 +70,11 @@ blog_post_tags               post_id → blog_posts (cascade),
 
 Rules:
 
-- Category/tag deletion is blocked while referenced by posts (restrict or RPC guard).
+- Constraints (enforced in the migration, not only application code): every `_translations` table has `CHECK (locale IN ('en','vi'))`; `title`, `summary`, `name` carry non-empty `CHECK`s; post/category/tag slugs are normalized (`^[a-z0-9]+(-[a-z0-9]+)*$`) and unique; `blog_post_tags` has composite PK `(post_id, tag_id)`; supporting indexes for the high-frequency repository queries — posts by `(status, published_at DESC)`, posts by `category_id`, translations by their PKs.
+- Category deletion is blocked while referenced by posts; tag deletion is likewise blocked while referenced (owner-operated CMS favors explicit blocking over silent association cleanup, for auditability).
 - RLS: anonymous/service read path exposes only `status='published'` rows (and their children); writes require the authenticated single-owner session — same fail-closed philosophy as resume publicity.
-- Publish gate lives inside an atomic RPC: setting `status='published'` fails unless both `en` and `vi` translations exist with non-empty `title`, `summary`, `content_md`. First successful publish stamps `published_at`; subsequent edits never alter it.
+- Publish gate lives inside an atomic RPC: setting `status='published'` fails unless both `en` and `vi` translations exist with non-empty `title`, `summary`, `content_md`, and a valid category. First successful publish stamps `published_at`; subsequent edits never alter it.
+- Update invariants enforced by the same RPC (never application-layer only): status transitions are validated atomically (`draft→published` gated as above; `published→draft` always allowed); a mutation that would delete or empty any required translation of an already-published post is **rejected** with a field-level error — the owner must explicitly unpublish first; category/tag references are validated in the same transaction.
 - All post mutations (create/update with translations + tag links, delete) go through atomic RPCs in one transaction, mirroring the existing `cms_atomic_mutations` pattern.
 - Seed (local-first then promoted): 3 starter categories — Knowledge, Techniques, Reviews — plus demo tag set, applied via `supabase db query --local -f scripts/<file>.sql` before any `--linked` promotion.
 
@@ -104,7 +107,7 @@ type PostDetail = PostListItem & {
 };
 ```
 
-Repository adapter (`repository.ts`) maps rows → view models behind functions such as `getPublishedPosts(locale, page)`, `getPostBySlug(locale, slug)`, `getCategoryPage(locale, slug, page)`, `getRelatedPosts(...)`. All public reads are wrapped in the Next data cache tagged `blog` (plus coarse per-listing tags), so `revalidateTag("blog")` from any admin mutation refreshes everything. ISR revalidation window acts only as a safety net.
+Repository adapter (`repository.ts`) maps rows → view models behind functions such as `getPublishedPosts(locale, page)`, `getPostBySlug(locale, slug)`, `getCategoryPage(locale, slug, page)`, `getRelatedPosts(...)`. **Single cache choke point:** every blog read — listing, detail, category, related posts, and the data feeding sitemap/RSS/OG generation — goes through repository functions wrapped in the Next data cache tagged `blog`, so one `revalidateTag("blog")` from any admin mutation refreshes all of them together. Freshness contract: invalidation is immediate — after a successful mutation the next request for any blog page/sitemap/feed re-renders from fresh data (no stale window by design); the ISR time-based revalidation window exists only as a safety net for missed invalidations.
 
 Missing translation, unpublished post, or repository read failure on a public route resolves to `notFound()` / cached-stale behavior — never a partial render (fail closed, matching resume publicity).
 
@@ -118,7 +121,7 @@ One server-side remark/rehype pipeline, shared verbatim by public pages and admi
 - **raw HTML passthrough disabled** — XSS-safe by construction; authoring stays pure Markdown
 - output: sanitized HTML string + `{ toc, headingCount }` metadata
 
-Reading time: words ÷ 200 wpm plus a fixed allowance per fenced code block, rounded up, minimum 1 minute. Deterministic from `content_md`.
+Reading time — deterministic algorithm (tests and implementation must agree exactly): strip fenced code blocks from the source first; count words in the remaining prose as maximal whitespace-separated runs after removing Markdown punctuation markers (`#`, `*`, `_`, `>`, `-`, table pipes); each removed code block contributes a fixed 60 "words"; total = `(proseWords + 60 × codeBlocks) / 200`, rounded up, minimum 1. Whitespace-splitting handles Vietnamese correctly (spaces delimit syllable groups).
 
 ## 6. Public routes & caching
 
@@ -132,8 +135,10 @@ Locale prefix follows existing routing: `en` at root, `vi` under `/vi`. All rout
 | `/blog/category/[slug]` | Category archive (same card grid, category header) |
 
 - Listing pagination uses real links (crawler-followable); no infinite scroll.
+- Canonical/redirect policy for listing URLs: `/blog` self-canonical; `/blog/page/1` permanently redirects to `/blog` (never a duplicate); `/blog/page/[n]` for n ≥ 2 self-canonical; out-of-range pages → `notFound()` (soft-404 prevention). Same rules apply under `/vi`.
 - Detail includes breadcrumb, article header, cover, prose body, TOC, related posts.
 - Draft/incomplete post access → `notFound()`.
+- Slug changes on published posts are URL migrations: the admin editor requires recording the old→new mapping as an entry in the existing SEO redirect map (`src/features/seo/redirects.ts`, 301) before saving; unpublished posts may rename freely. Pagination URLs are ordering-dependent by nature and receive no per-post redirects — canonical tags above keep them non-duplicative.
 
 ## 7. SEO infrastructure
 
