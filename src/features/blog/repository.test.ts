@@ -219,6 +219,39 @@ test("a published post missing the requested locale translation is not renderabl
   }
 });
 
+test("a published post with no tags still gets recency-based related posts", async () => {
+  await client.from("blog_posts").upsert(
+    {
+      id: "post-nolink",
+      slug: "post-nolink",
+      category_id: "reviews",
+      status: "published",
+      published_at: "2026-01-05T00:00:00Z",
+      updated_at: "2026-01-05T00:00:00Z",
+    },
+    { onConflict: "id" },
+  );
+  await client.from("blog_post_translations").upsert(
+    [
+      { post_id: "post-nolink", locale: "en", title: "NoLink EN", summary: "NoLink summary", content_md: "# NoLink\n" },
+      { post_id: "post-nolink", locale: "vi", title: "NoLink VI", summary: "NoLink summary VI", content_md: "# NoLink VI\n" },
+    ],
+    { onConflict: "post_id,locale" },
+  );
+
+  try {
+    const post = await queryPostBySlug("en", "post-nolink");
+    assert.ok(post, "tagless published post resolves");
+    assert.deepEqual(
+      post.relatedPosts.map((p) => p.slug),
+      [POSTS.alpha, POSTS.gamma, POSTS.delta],
+      "no-tag post falls back to the 3 most recent published posts",
+    );
+  } finally {
+    await client.from("blog_posts").delete().eq("id", "post-nolink");
+  }
+});
+
 test("category page returns header + only that category's published posts", async () => {
   const category = await queryCategoryPage("en", "knowledge", 1);
   assert.ok(category, "known category resolves");

@@ -73,10 +73,8 @@ test("hyphenated tokens count as one word", () => {
   assert.equal(readingTimeMinutes("state-of-the-art design"), 1);
 });
 
-test("unterminated fence degrades to prose, never throws", () => {
-  const md = ["```ts", "not really closed", ...words(400).split("\n")].join("\n");
-  // unterminated fence: everything after the opener counts as prose
-  const minutes = readingTimeMinutes(md);
-  assert.equal(typeof minutes, "number");
-  assert.ok(minutes >= 1);
+test("unterminated fence degrades to prose and is never counted as a code block", () => {
+  const md = ["```ts", "code line one", "code line two", ...words(200).split("\n")].join("\n");
+  // 3 + 3 + 200 = 206 prose words, no code block -> ceil(206/200) = 2
+  assert.equal(readingTimeMinutes(md), 2);
 });

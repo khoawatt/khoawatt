@@ -166,7 +166,7 @@ async function queryRelatedPosts(
   tagIds: string[],
 ): Promise<PostListItem[]> {
   const client = getServiceClient();
-  if (!hasCmsConfig() || !client || tagIds.length === 0) return [];
+  if (!hasCmsConfig() || !client) return [];
 
   try {
     const { data, error } = await client
@@ -194,6 +194,8 @@ async function queryRelatedPosts(
           String(b.item.publishedAt).localeCompare(String(a.item.publishedAt)),
       );
 
+    // Posts with no tags score 0 for everyone and still fall back to recency,
+    // so a tagless post never shows an empty related section.
     return scored.slice(0, RELATED_POSTS_LIMIT).map((entry) => entry.item);
   } catch {
     return [];
