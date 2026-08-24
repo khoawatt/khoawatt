@@ -77,7 +77,8 @@ const legacyRedirectRules: ReadonlyArray<LegacyRedirectRule> = [
     legacy: "/category/case-studies",
     destination: { pathname: "/", hash: "#projects" },
   },
-  { legacy: "/blog", destination: { pathname: "/", hash: "" } },
+  // `/blog` is intentionally NOT in the legacy matrix: the new site has a real
+  // `/blog` route (superseding the old WordPress `/blog` → home redirect).
   ...blogPostSlugs.map(
     (slug) =>
       ({
