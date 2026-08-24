@@ -27,7 +27,7 @@ The product brief (`docs/00-product-brief.md`) lists a full blog rebuild as an M
 | Taxonomy | CMS-managed categories (topic clusters, own archive pages) + free tags on posts |
 | Tags v1 | Non-interactive chips on cards/article; drive related-posts matching; no tag archive pages |
 | Editor | Plain-Markdown textarea + server-rendered Preview (same pipeline as public site) |
-| Rendering/caching | ISR with data-cache tag `blog`; admin mutations call `revalidateTag("blog")` at one choke point; freshness contract below |
+| Rendering/caching | ISR with data-cache tag `blog`; admin Server Actions call `updateTag("blog")` at one choke point (read-your-writes, no stale window); freshness contract below |
 | Slug strategy | One stable slug per post shared by both locales (`/blog/{slug}`, `/vi/blog/{slug}`); changing a published post's slug is a URL change requiring a redirect entry (see §6) |
 | Published-post edits | Mutations that would remove/empty a required translation of a published post are rejected by the RPC (owner unpublishes explicitly first) |
 | Reading time | Computed at render from `content_md` via the deterministic algorithm in §5; never stored |
@@ -107,7 +107,9 @@ type PostDetail = PostListItem & {
 };
 ```
 
-Repository adapter (`repository.ts`) maps rows → view models behind functions such as `getPublishedPosts(locale, page)`, `getPostBySlug(locale, slug)`, `getCategoryPage(locale, slug, page)`, `getRelatedPosts(...)`. **Single cache choke point:** every blog read — listing, detail, category, related posts, and the data feeding sitemap/RSS/OG generation — goes through repository functions wrapped in the Next data cache tagged `blog`, so one `revalidateTag("blog")` from any admin mutation refreshes all of them together. Freshness contract: invalidation is immediate — after a successful mutation the next request for any blog page/sitemap/feed re-renders from fresh data (no stale window by design); the ISR time-based revalidation window exists only as a safety net for missed invalidations.
+Repository adapter (`repository.ts`) maps rows → view models behind functions such as `getPublishedPosts(locale, page)`, `getPostBySlug(locale, slug)`, `getCategoryPage(locale, slug, page)`, `getRelatedPosts(...)`. **Single cache choke point:** every blog read — listing, detail, category, related posts, and the data feeding sitemap/RSS/OG generation — goes through repository functions wrapped in the Next data cache tagged `blog`, so one invalidation from any admin mutation refreshes all of them together.
+
+**Invalidation primitive (Next.js 16):** admin mutations are Server Actions, so they call `updateTag("blog")` — the Next 16 read-your-writes primitive that immediately expires the tag's cached data; the **next** request for any blog page/sitemap/feed blocks on a fresh render and serves new data, with no stale window. This is exactly the documented freshness contract. `revalidateTag` is deliberately **not** used for this path: its recommended two-argument form (`revalidateTag("blog", "max")`) is stale-while-revalidate (first post-mutation visitor gets stale content while fresh data loads in the background), and the single-argument form that matches `updateTag` is deprecated in Next 16. If any future mutation path runs outside a Server Action (e.g. a Route Handler/webhook), use `revalidateTag("blog", { expire: 0 })` there to preserve immediate expiration. The ISR time-based revalidation window exists only as a safety net for missed invalidations.
 
 Missing translation, unpublished post, or repository read failure on a public route resolves to `notFound()` / cached-stale behavior — never a partial render (fail closed, matching resume publicity).
 
@@ -206,7 +208,7 @@ Reuses the dashboard's established list/form/Zod-error patterns; no new design l
   - Locale tabs `en` / `vi`: title, summary, Markdown textarea (monospace) + **Preview** button invoking a server action that renders through the shared pipeline.
   - Status control with publish gate: attempt surfaces exactly which locale/fields are missing; otherwise publishes atomically.
 - Categories CRUD (slug + `en`/`vi` names), guarded against deletion while posts reference them.
-- Every successful mutation triggers `revalidateTag("blog")` at the server-action choke point.
+- Every successful mutation triggers `updateTag("blog")` at the server-action choke point (read-your-writes: the editor and the next visitor both see fresh data immediately).
 
 ## 10. Error handling summary
 
@@ -220,6 +222,7 @@ Unit tests (`node:test` via `tsx`, colocated `*.test.ts` like existing features)
 
 - Markdown pipeline: heading anchors + TOC extraction, code-block highlighting markup, reading-time calculation, raw-HTML rejection.
 - Repository mapping row→view-model; publish-gate acceptance/rejection cases.
+- Cache invalidation contract: publish, edit, unpublish, and delete each trigger `updateTag("blog")` at the choke point, and the immediately following read (listing, detail, sitemap, feed) reflects the new state — no stale window.
 - RSS XML generation; sitemap entries incl. alternates; JSON-LD object shapes.
 
 Standard gates before merge: `npm run lint`, `npm run typecheck`, production build (`-- --webpack` fallback per known Turbopack sandbox quirk), keyboard/a11y smoke on TOC + cards + pagination, responsive smoke at mobile/tablet/desktop, both themes, both locales, Rich Results validation of JSON-LD, feed validity check.
@@ -231,7 +234,7 @@ Database changes follow the local-first workflow: migration + seed applied and v
 1. **Schema foundation** — blog tables, translations, RLS, atomic-mutation + publish-gate RPCs, seed; update `docs/03-content-data-model.md` with blog entities.
 2. **Feature layer** — types, repository adapter, Markdown pipeline, reading time, unit tests.
 3. **Public surface** — listing/detail/category routes, card + article + TOC components, core SEO (metadata/hreflang/canonical/sitemap/JSON-LD), navigation entry points; update `docs/02-ui-ux-spec.md` with the Blog section.
-4. **Admin** — Posts/Categories CRUD, editor with locale tabs + Preview, publish gate wiring, revalidateTag choke point.
+4. **Admin** — Posts/Categories CRUD, editor with locale tabs + Preview, publish gate wiring, `updateTag` choke point.
 5. **Distribution extras** — auto OG images, RSS feeds, scroll-spy polish, related posts module.
 
 Each slice ships with its own verification evidence per the PR contract (tests run, screenshots, limitations, docs affected).
