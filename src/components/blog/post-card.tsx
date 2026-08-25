@@ -52,6 +52,24 @@ export function PostCard({ locale, messages, post }: Readonly<PostCardProps>) {
           <span aria-hidden="true" className="blog-card__meta-separator">·</span>
           <span>{readTime}</span>
         </p>
+        <p aria-hidden="true" className="blog-card__cta">
+          {messages.readMoreLabel}
+          <svg
+            aria-hidden="true"
+            className="blog-card__cta-arrow"
+            fill="none"
+            height="16"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+            width="16"
+          >
+            <path d="M5 12h14" />
+            <path d="m12 5 7 7-7 7" />
+          </svg>
+        </p>
       </div>
     </article>
   );

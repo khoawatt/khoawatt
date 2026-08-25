@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
 
 import type { Locale } from "@/features/i18n/config";
@@ -47,6 +48,8 @@ export function SiteHeader({
   const restoreMenuFocusAfterLocaleRef = useRef(false);
   const homePath = getLocalizedPathname("/", locale);
   const blogPath = getLocalizedPathname(blogNavigationPath, locale);
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     function updateActiveSection() {
@@ -144,7 +147,7 @@ export function SiteHeader({
     );
 
     return () => window.cancelAnimationFrame(frame);
-  }, [locale]);
+  }, [locale, pathname]);
 
   useEffect(() => {
     if (menuOpen) {
@@ -223,6 +226,17 @@ export function SiteHeader({
     sectionId: NavigationSectionId,
   ) {
     event.preventDefault();
+    closeAfterNavigation();
+
+    // Section anchors only exist on the home page. From any other route
+    // (e.g. /blog) a real navigation to `homePath#section` is required —
+    // pushState alone would rewrite the URL without loading the section.
+    if (!document.getElementById(sectionId)) {
+      setActiveSection(sectionId);
+      router.push(`${homePath}#${sectionId}`);
+      return;
+    }
+
     const hash = `#${sectionId}`;
 
     if (window.location.hash !== hash) {
@@ -230,7 +244,6 @@ export function SiteHeader({
     }
 
     setActiveSection(sectionId);
-    closeAfterNavigation();
     window.requestAnimationFrame(() =>
       document.getElementById(sectionId)?.scrollIntoView(),
     );
@@ -238,6 +251,14 @@ export function SiteHeader({
 
   function navigateHome(event: MouseEvent<HTMLAnchorElement>) {
     event.preventDefault();
+    closeAfterNavigation();
+
+    if (pathname !== homePath) {
+      setActiveSection("home");
+      router.push(`${homePath}${window.location.search}`);
+      return;
+    }
+
     const homeUrl = `${homePath}${window.location.search}`;
 
     if (
@@ -248,7 +269,6 @@ export function SiteHeader({
     }
 
     setActiveSection("home");
-    closeAfterNavigation();
     window.requestAnimationFrame(() => {
       const reduceMotion = window.matchMedia(
         "(prefers-reduced-motion: reduce)",

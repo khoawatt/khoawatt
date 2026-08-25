@@ -29,6 +29,7 @@ import { getServiceClient } from "@/features/cms/server";
 import { renderMarkdown } from "./markdown";
 import { readingTimeMinutes } from "./reading-time";
 import type {
+  BlogCategoryNavEntry,
   BlogCategoryView,
   BlogListingView,
   PostDetail,
@@ -332,6 +333,40 @@ export async function queryCategoryIndex(): Promise<{ slug: string }[]> {
   }
 }
 
+interface CategoryNavRow extends CategoryRow {
+  blog_posts?: unknown[] | null;
+}
+
+/** Uncached core: categories with ≥1 published post, localized name + count. */
+export async function queryCategoryNav(
+  locale: Locale,
+): Promise<BlogCategoryNavEntry[]> {
+  const client = getServiceClient();
+  if (!hasCmsConfig() || !client) return [];
+
+  try {
+    const { data, error } = await client
+      .from("blog_categories")
+      .select(
+        "slug, sort_order, blog_category_translations(locale, name), blog_posts(id)",
+      )
+      .eq("blog_posts.status", "published")
+      .order("sort_order")
+      .order("slug");
+    if (error || !data) return [];
+
+    return (data as unknown as CategoryNavRow[])
+      .map((row) => ({
+        slug: row.slug,
+        name: localeRow(row.blog_category_translations, locale)?.name ?? "",
+        postCount: row.blog_posts?.length ?? 0,
+      }))
+      .filter((entry) => entry.name !== "" && entry.postCount > 0);
+  } catch {
+    return [];
+  }
+}
+
 export interface RssPostRow {
   title: string;
   slug: string;
@@ -410,6 +445,12 @@ export const getPublishedPostIndex = unstable_cache(
 export const getCategoryIndex = unstable_cache(
   () => queryCategoryIndex(),
   ["blog", "category-index"],
+  { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
+);
+
+export const getCategoryNav = unstable_cache(
+  (locale: Locale) => queryCategoryNav(locale),
+  ["blog", "category-nav"],
   { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
 );
 

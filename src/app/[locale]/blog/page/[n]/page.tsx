@@ -2,11 +2,15 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 
 import { BlogCardGrid } from "@/components/blog/blog-card-grid";
+import { BlogHero } from "@/components/blog/blog-hero";
+import { CategoryNav } from "@/components/blog/category-nav";
 import { Pagination } from "@/components/blog/pagination";
 import { PageShell } from "@/components/layout/page-shell";
 import { Section } from "@/components/layout/section";
-import { SectionHeading } from "@/components/ui/section-heading";
-import { getPublishedPosts } from "@/features/blog/repository";
+import {
+  getCategoryNav,
+  getPublishedPosts,
+} from "@/features/blog/repository";
 import { getBlogListingMetadata } from "@/features/blog/seo";
 import { getMessages } from "@/features/i18n/messages";
 import { getLocalizedPathname } from "@/features/i18n/routing";
@@ -48,7 +52,10 @@ export default async function BlogPageNumber({
   }
 
   const messages = await getMessages(locale);
-  const listing = await getPublishedPosts(locale, page);
+  const [listing, categories] = await Promise.all([
+    getPublishedPosts(locale, page),
+    getCategoryNav(locale),
+  ]);
 
   if (page > listing.totalPages) {
     notFound();
@@ -57,11 +64,16 @@ export default async function BlogPageNumber({
   return (
     <PageShell>
       <Section className="blog-section">
-        <SectionHeading
-          description={messages.blog.intro}
+        <BlogHero
+          badge={messages.blog.pageNumberLabel.replace("{n}", String(page))}
           eyebrow={messages.blog.eyebrow}
-          level="h1"
-          title={messages.blog.pageNumberLabel.replace("{n}", String(page))}
+          intro={messages.blog.intro}
+          title={messages.blog.title}
+        />
+        <CategoryNav
+          entries={categories}
+          locale={locale}
+          messages={messages.blog}
         />
         <BlogCardGrid
           emptyLabel={messages.blog.emptyState}

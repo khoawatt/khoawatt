@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 
 import { BlogCardGrid } from "@/components/blog/blog-card-grid";
 import { BlogHero } from "@/components/blog/blog-hero";
 import { CategoryNav } from "@/components/blog/category-nav";
-import { JsonLdScript } from "@/components/blog/json-ld";
 import { Pagination } from "@/components/blog/pagination";
 import { PageShell } from "@/components/layout/page-shell";
 import { Section } from "@/components/layout/section";
@@ -13,43 +12,61 @@ import {
   getCategoryNav,
   getCategoryPage,
 } from "@/features/blog/repository";
-import {
-  categoryBreadcrumbJsonLd,
-  getBlogCategoryMetadata,
-} from "@/features/blog/seo";
+import { getBlogCategoryMetadata } from "@/features/blog/seo";
 import { getMessages } from "@/features/i18n/messages";
 import { getLocalizedPathname } from "@/features/i18n/routing";
 import { getLocaleFromParams } from "@/features/i18n/server";
 
-interface BlogCategoryPageProps {
-  params: Promise<{ locale: string; slug: string }>;
+interface BlogCategoryPageNumberProps {
+  params: Promise<{ locale: string; slug: string; n: string }>;
 }
 
 export async function generateMetadata({
   params,
-}: Readonly<BlogCategoryPageProps>): Promise<Metadata> {
+}: Readonly<BlogCategoryPageNumberProps>): Promise<Metadata> {
   const locale = await getLocaleFromParams(params);
-  const { slug } = await params;
+  const { slug, n } = await params;
   const messages = await getMessages(locale);
   const category = await getCategoryPage(locale, slug, 1);
 
   if (!category) return {};
 
-  return getBlogCategoryMetadata(locale, category, messages.blog, messages.metadata.title);
+  return getBlogCategoryMetadata(
+    locale,
+    category,
+    messages.blog,
+    messages.metadata.title,
+    Number(n),
+  );
 }
 
-export default async function BlogCategoryPage({
+export default async function BlogCategoryPageNumber({
   params,
-}: Readonly<BlogCategoryPageProps>) {
+}: Readonly<BlogCategoryPageNumberProps>) {
   const locale = await getLocaleFromParams(params);
-  const { slug } = await params;
+  const { slug, n } = await params;
+  const page = Number(n);
+
+  // Same canonical policy as /blog/page/[n]: page 1 lives at the category
+  // root; invalid or out-of-range pages are soft-404s.
+  if (!Number.isInteger(page) || page < 1) {
+    notFound();
+  }
+
+  const categoryRoot = getLocalizedPathname(`/blog/category/${slug}`, locale);
+  if (page === 1) {
+    permanentRedirect(categoryRoot);
+  }
+
   const messages = await getMessages(locale);
   const [category, categories] = await Promise.all([
-    getCategoryPage(locale, slug, 1),
+    getCategoryPage(locale, slug, page),
     getCategoryNav(locale),
   ]);
 
-  if (!category) notFound();
+  if (!category || page > category.listing.totalPages) {
+    notFound();
+  }
 
   const homePath = getLocalizedPathname("/", locale);
   const blogPath = getLocalizedPathname("/blog", locale);
@@ -72,6 +89,7 @@ export default async function BlogCategoryPage({
           </ol>
         </nav>
         <BlogHero
+          badge={messages.blog.pageNumberLabel.replace("{n}", String(page))}
           eyebrow={messages.blog.eyebrow}
           size="compact"
           title={category.name}
@@ -95,9 +113,6 @@ export default async function BlogCategoryPage({
           totalPages={category.listing.totalPages}
         />
       </Section>
-      <JsonLdScript
-        data={categoryBreadcrumbJsonLd(locale, category, messages.blog)}
-      />
     </PageShell>
   );
 }

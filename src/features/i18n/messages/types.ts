@@ -41,6 +41,11 @@ export interface BlogMessages {
   paginationPrev: string;
   paginationNext: string;
   pageNumberLabel: string;
+  topicsLabel: string;
+  topicsViewAll: string;
+  categoryPostCount: string;
+  readMoreLabel: string;
+  backToTopLabel: string;
 }
 
 export interface PortfolioMessages {

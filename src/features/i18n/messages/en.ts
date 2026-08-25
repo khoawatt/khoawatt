@@ -47,6 +47,11 @@ const messages = {
     paginationPrev: "Previous page",
     paginationNext: "Next page",
     pageNumberLabel: "Page {n}",
+    topicsLabel: "Knowledge library",
+    topicsViewAll: "All topics",
+    categoryPostCount: "{count} posts",
+    readMoreLabel: "Read post",
+    backToTopLabel: "Back to top",
   },
   themeToggle: {
     toggle: "Toggle color theme",

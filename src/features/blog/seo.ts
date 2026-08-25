@@ -51,13 +51,15 @@ export function getBlogCategoryMetadata(
   category: BlogCategoryView,
   messages: BlogMessages,
   metadataTitle: string,
+  page = 1,
 ): Metadata {
   const description = `${messages.intro} ${category.name}.`;
+  const pageSuffix = page > 1 ? `/page/${page}` : "";
   return getSeoMetadata({
     locale,
     title: `${category.name} — ${metadataTitle}`,
     description,
-    pathname: `/blog/category/${category.slug}`,
+    pathname: `/blog/category/${category.slug}${pageSuffix}`,
   });
 }
 
