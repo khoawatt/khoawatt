@@ -11,21 +11,30 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "tsx --test src/content/*.test.ts src/features/contact/*.test.ts src/features/newsletter/*.test.ts src/features/seo/*.test.ts \"src/app/admin/(dashboard)/skills/skill-buckets.test.ts\" src/app/api/resume-media/route.test.ts",
+    "test": "tsx --test src/content/*.test.ts src/features/contact/*.test.ts src/features/newsletter/*.test.ts src/features/seo/*.test.ts src/features/blog/reading-time.test.ts src/features/blog/markdown.test.ts \"src/app/admin/(dashboard)/skills/skill-buckets.test.ts\" src/app/api/resume-media/route.test.ts",
     "preflight": "tsx scripts/preflight-cutover.ts",
     "seed:admin": "node scripts/seed-admin.mjs",
     "backfill": "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54331} node scripts/backfill-content.mjs",
     "test:db": "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54331} node --test scripts/db-invariants.test.mjs",
-    "test:cms": "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54331} tsx --test src/features/cms/repository.test.ts",
+    "test:cms": "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54331} tsx --test src/features/cms/repository.test.ts src/features/blog/repository.test.ts",
     "test:rls": "supabase db test --local supabase/tests"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
+    "hast-util-to-string": "^3.0.1",
     "next": "16.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "server-only": "^0.0.1"
+    "rehype-highlight": "^7.0.2",
+    "rehype-slug": "^6.0.0",
+    "rehype-stringify": "^10.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.2",
+    "server-only": "^0.0.1",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.1.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
