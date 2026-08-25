@@ -377,6 +377,10 @@ export function PostForm({
                     rows={16}
                     value={contentMdEn}
                   />
+                  <small className="admin-hint">
+                    Start the body with `##` headings — the title above is the single H1 of the
+                    page, and a leading `#` line is dropped when rendering.
+                  </small>
                 </label>
               </>
             ) : (
@@ -423,6 +427,10 @@ export function PostForm({
                     rows={16}
                     value={contentMdVi}
                   />
+                  <small className="admin-hint">
+                    Start the body with `##` headings — the title above is the single H1 of the
+                    page, and a leading `#` line is dropped when rendering.
+                  </small>
                 </label>
               </>
             )}

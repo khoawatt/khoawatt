@@ -5,6 +5,7 @@
  * admin Preview:
  *   - GFM (tables, task lists, strikethrough, autolinks)
  *   - heading slugs restricted to h2/h3 for TOC extraction
+ *   - a leading `h1` is removed (the page template owns the article's single H1)
  *   - syntax highlighting for fenced code blocks (token classes; the per-theme
  *     palettes are a CSS concern applied in the UI slice)
  *   - raw HTML passthrough is disabled by construction (remark-rehype without
@@ -30,6 +31,19 @@ export interface MarkdownResult {
   html: string;
   toc: TocEntry[];
   headingCount: number;
+}
+
+/**
+ * Drop a leading `h1` element. The article template owns the page's single
+ * `<h1>` (post title), so an author opening the body with `# …` would produce
+ * two H1s per article. Only the very first block is removed — `h1`s appearing
+ * after other content are kept untouched.
+ */
+function stripLeadingHeading(tree: import("hast").Root): void {
+  const first = tree.children[0];
+  if (first?.type === "element" && first.tagName === "h1") {
+    tree.children.shift();
+  }
 }
 
 /** Rehype transformer: collect h2/h3 headings (after `rehype-slug` assigns ids). */
@@ -60,6 +74,7 @@ const processor = unified()
 export async function renderMarkdown(markdown: string): Promise<MarkdownResult> {
   const tree = processor.runSync(processor.parse(markdown));
 
+  stripLeadingHeading(tree);
   const toc = collectToc(tree);
   const html = processor.stringify(tree);
   return { html, toc, headingCount: toc.length };
