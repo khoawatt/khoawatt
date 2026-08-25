@@ -90,6 +90,19 @@ function MediaIcon() {
   );
 }
 
+function BlogIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+      <path
+        d="M4 5h16M4 12h16M4 19h10"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
 const navLinks: Array<{ href: string; label: string; icon: () => ReactNode }> = [
   { href: "/admin/settings", label: "Settings", icon: SettingsIcon },
   { href: "/admin/profile", label: "Profile", icon: ProfileIcon },
@@ -100,9 +113,39 @@ const navLinks: Array<{ href: string; label: string; icon: () => ReactNode }> = 
   { href: "/admin/media", label: "Media", icon: MediaIcon },
 ];
 
+const blogLinks: Array<{ href: string; label: string; icon: () => ReactNode }> = [
+  { href: "/admin/blog", label: "Posts", icon: BlogIcon },
+  { href: "/admin/blog/categories", label: "Categories", icon: BlogIcon },
+];
+
 function isActive(pathname: string, href: string): boolean {
   if (href === "/admin/settings") return pathname === href;
   return pathname.startsWith(href);
+}
+
+function SidebarLinks({
+  links,
+  pathname,
+}: {
+  links: Array<{ href: string; label: string; icon: () => ReactNode }>;
+  pathname: string;
+}) {
+  return links.map((link) => {
+    const Icon = link.icon;
+    return (
+      <Link
+        aria-current={isActive(pathname, link.href) ? "page" : undefined}
+        className="admin-sidebar__link"
+        href={link.href}
+        key={link.href}
+      >
+        <span className="admin-sidebar__icon">
+          <Icon />
+        </span>
+        {link.label}
+      </Link>
+    );
+  });
 }
 
 export function AdminSidebar() {
@@ -115,22 +158,9 @@ export function AdminSidebar() {
         <span className="admin-brand__name">Khoa Watt</span>
       </div>
       <nav className="admin-sidebar__nav">
-        {navLinks.map((link) => {
-          const Icon = link.icon;
-          return (
-            <Link
-              aria-current={isActive(pathname, link.href) ? "page" : undefined}
-              className="admin-sidebar__link"
-              href={link.href}
-              key={link.href}
-            >
-              <span className="admin-sidebar__icon">
-                <Icon />
-              </span>
-              {link.label}
-            </Link>
-          );
-        })}
+        <SidebarLinks links={navLinks} pathname={pathname} />
+        <p className="admin-sidebar__group-label">Blog</p>
+        <SidebarLinks links={blogLinks} pathname={pathname} />
       </nav>
     </aside>
   );
