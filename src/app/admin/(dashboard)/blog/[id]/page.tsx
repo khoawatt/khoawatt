@@ -32,7 +32,7 @@ export default async function AdminEditPostPage({
 
   return (
     <AdminPage backHref="/admin/blog" title="Edit post">
-      <AdminFormCard>
+      <AdminFormCard className="admin-form-card--wide">
         <h2>Post details</h2>
         <PostForm
           categories={categories}
