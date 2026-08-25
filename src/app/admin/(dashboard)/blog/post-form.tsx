@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -13,6 +13,7 @@ import {
   type BlogPostFormData,
 } from "./actions";
 import type { AdminCategoryRow, AdminPostRow, AdminTagRow } from "./data";
+import { MediaInsertButton } from "./media-insert";
 
 interface CoverOption {
   name: string;
@@ -67,6 +68,26 @@ export function PostForm({
   const [titleVi, setTitleVi] = useState(existing?.titleVi ?? "");
   const [summaryVi, setSummaryVi] = useState(existing?.summaryVi ?? "");
   const [contentMdVi, setContentMdVi] = useState(existing?.contentMdVi ?? "");
+
+  const enContentRef = useRef<HTMLTextAreaElement>(null);
+  const viContentRef = useRef<HTMLTextAreaElement>(null);
+
+  function insertMarkdownImage(tab: LocaleTab, url: string, alt: string) {
+    const textarea = tab === "en" ? enContentRef.current : viContentRef.current;
+    const value = tab === "en" ? contentMdEn : contentMdVi;
+    const setter = tab === "en" ? setContentMdEn : setContentMdVi;
+
+    const position = textarea?.selectionStart ?? value.length;
+    const markdown = `![${alt}](${url})`;
+    setter(`${value.slice(0, position)}${markdown}${value.slice(position)}`);
+
+    window.requestAnimationFrame(() => {
+      if (textarea) {
+        textarea.selectionStart = textarea.selectionEnd = position + markdown.length;
+        textarea.focus();
+      }
+    });
+  }
 
   const [newTagName, setNewTagName] = useState("");
   const [newTagError, setNewTagError] = useState<string | null>(null);
@@ -315,9 +336,16 @@ export function PostForm({
             </label>
             <label className="admin-field">
               <span>Markdown content (EN)</span>
+              <div className="admin-form-row">
+                <MediaInsertButton
+                  media={coverOptions}
+                  onInsert={(url, alt) => insertMarkdownImage("en", url, alt)}
+                />
+              </div>
               <textarea
                 className="admin-markdown"
                 onChange={(event) => setContentMdEn(event.target.value)}
+                ref={enContentRef}
                 rows={14}
                 value={contentMdEn}
               />
@@ -346,9 +374,16 @@ export function PostForm({
             </label>
             <label className="admin-field">
               <span>Markdown content (VI)</span>
+              <div className="admin-form-row">
+                <MediaInsertButton
+                  media={coverOptions}
+                  onInsert={(url, alt) => insertMarkdownImage("vi", url, alt)}
+                />
+              </div>
               <textarea
                 className="admin-markdown"
                 onChange={(event) => setContentMdVi(event.target.value)}
+                ref={viContentRef}
                 rows={14}
                 value={contentMdVi}
               />

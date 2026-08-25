@@ -4326,3 +4326,57 @@ video {
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
+
+/* --- Blog admin: in-article image insert --- */
+
+.media-insert__panel {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 28rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.media-insert__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.media-insert__thumb {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+  text-align: start;
+}
+
+.media-insert__thumb:hover {
+  border-color: var(--color-accent);
+}
+
+.media-insert__thumb img {
+  width: 100%;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.media-insert__name {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-insert__upload {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
