@@ -35,8 +35,6 @@ const equivalentCases: RedirectCase[] = [
 ];
 
 const homepageCases: RedirectCase[] = [
-  { legacy: "/blog", expectedHash: "" },
-  { legacy: "/blog/", expectedHash: "" },
   { legacy: "/what-is-a-web-server", expectedHash: "" },
   { legacy: "/identify-a-seo-standard-website", expectedHash: "" },
   { legacy: "/javascript-code-compilation-process", expectedHash: "" },
@@ -115,6 +113,8 @@ test("legacy redirect: unknown and unlisted paths return null", () => {
     "/blogging",
     "/tag",
     "/blocks",
+    "/blog",
+    "/blog/smoke-post",
   ]) {
     assert.equal(getLegacyRedirectTarget("en", pathname), null, pathname);
   }
@@ -133,7 +133,7 @@ test("legacy redirect: query string is preserved through the redirect URL", () =
 });
 
 test("legacy redirect: homepage fallback keeps the query string", () => {
-  const target = getLegacyRedirectTarget("vi", "/blog/");
+  const target = getLegacyRedirectTarget("vi", "/what-is-a-web-server/");
   assert.ok(target);
   const url = buildRedirectUrl(
     "https://example.com",
@@ -170,13 +170,6 @@ test("legacy redirect: en-prefixed legacy URL redirects directly (no chain)", ()
     response.headers.get("location"),
     "https://example.com/?x=1#resume",
   );
-});
-
-test("legacy redirect: en-prefixed blog URL redirects directly to the root", () => {
-  const request = new NextRequest("https://example.com/en/blog/");
-  const response = proxy(request);
-  assert.equal(response.status, 301);
-  assert.equal(response.headers.get("location"), "https://example.com/");
 });
 
 test("legacy redirect: en-prefixed case-studies URL redirects directly", () => {

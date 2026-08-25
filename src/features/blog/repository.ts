@@ -6,20 +6,22 @@
  * published-only filter is enforced here at the query boundary, fail-closed,
  * matching resume publicity.
  *
- * Caching — single choke point: every public read goes through a `"use cache"`
- * wrapper tagged `blog`, so one `updateTag("blog")` from any admin mutation
- * refreshes listing, detail, category, and related reads together. `cacheLife`
- * is only a safety net for missed invalidations; freshness is driven by
- * `updateTag`.
+ * Caching — single choke point: every public read runs through an
+ * `unstable_cache` wrapper tagged `blog`, so one `updateTag("blog")` from any
+ * admin Server Action refreshes listing, detail, category, related, sitemap,
+ * and feed reads together. The `revalidate` window is only a safety net for
+ * missed invalidations; freshness is driven by `updateTag`. (`"use cache"` +
+ * `cacheTag` would be the preferred primitive but requires the global
+ * `cacheComponents` flag, which is too invasive for the existing app; the
+ * tagged data-cache contract is identical.)
  *
- * The `query*` functions are the uncached core (exported for tests — `cacheTag`
- * is only valid inside a `"use cache"` function). They never throw on DB
- * failure: missing translation, unpublished post, or a read error resolves to
- * `null` / an empty listing so routes can map to `notFound()` / empty state
- * rather than a 500.
+ * The `query*` functions are the uncached core (exported for tests). They never
+ * throw on DB failure: missing translation, unpublished post, or a read error
+ * resolves to `null` / an empty listing so routes can map to `notFound()` /
+ * empty state rather than a 500.
  */
 import type { Locale } from "@/features/i18n/config";
-import { cacheLife, cacheTag } from "next/cache";
+import { unstable_cache } from "next/cache";
 
 import { hasCmsConfig } from "@/features/cms/config";
 import { getMediaPublicUrl } from "@/features/cms/media";
@@ -38,6 +40,8 @@ export const BLOG_CACHE_TAG = "blog";
 const PAGE_SIZE = 6;
 const RELATED_POSTS_LIMIT = 3;
 const COVER_FRAME = { width: 800, height: 450 };
+/** Safety net only: refresh cached reads at most this often if `updateTag` is missed. */
+const BLOG_SAFETY_NET_SECONDS = 60 * 60 * 24;
 
 interface CategoryNameRow {
   locale: string;
@@ -281,38 +285,87 @@ export async function queryCategoryPage(
   }
 }
 
+/** Uncached core: all published post slugs + dates for sitemap/feed data. */
+export async function queryPublishedPostIndex(): Promise<
+  { slug: string; publishedAt: string; updatedAt: string }[]
+> {
+  const client = getServiceClient();
+  if (!hasCmsConfig() || !client) return [];
+
+  try {
+    const { data, error } = await client
+      .from("blog_posts")
+      .select("slug, published_at, updated_at")
+      .eq("status", "published")
+      .order("published_at", { ascending: false });
+    if (error || !data) return [];
+
+    return (data as unknown as { slug: string; published_at: string; updated_at: string }[]).map(
+      (row) => ({
+        slug: row.slug,
+        publishedAt: row.published_at,
+        updatedAt: row.updated_at,
+      }),
+    );
+  } catch {
+    return [];
+  }
+}
+
+/** Uncached core: category slugs that currently have published posts. */
+export async function queryCategoryIndex(): Promise<{ slug: string }[]> {
+  const client = getServiceClient();
+  if (!hasCmsConfig() || !client) return [];
+
+  try {
+    const { data, error } = await client
+      .from("blog_categories")
+      .select("slug, blog_posts(id)")
+      .eq("blog_posts.status", "published");
+    if (error || !data) return [];
+
+    return (data as unknown as { slug: string; blog_posts: unknown[] }[])
+      .filter((row) => row.blog_posts.length > 0)
+      .map((row) => ({ slug: row.slug }));
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Cached public accessors. Every read is tagged `blog` at the single choke
- * point; `updateTag("blog")` invalidates them all together.
+ * point; `updateTag("blog")` from an admin Server Action invalidates them all
+ * together. The `revalidate` window is only a safety net for missed
+ * invalidations.
  */
 
-export async function getPublishedPosts(
-  locale: Locale,
-  page: number,
-): Promise<BlogListingView> {
-  "use cache";
-  cacheTag(BLOG_CACHE_TAG);
-  cacheLife("weeks");
-  return queryPublishedPosts(locale, page);
-}
+export const getPublishedPosts = unstable_cache(
+  (locale: Locale, page: number) => queryPublishedPosts(locale, page),
+  ["blog", "published-posts"],
+  { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
+);
 
-export async function getPostBySlug(
-  locale: Locale,
-  slug: string,
-): Promise<PostDetail | null> {
-  "use cache";
-  cacheTag(BLOG_CACHE_TAG);
-  cacheLife("weeks");
-  return queryPostBySlug(locale, slug);
-}
+export const getPostBySlug = unstable_cache(
+  (locale: Locale, slug: string) => queryPostBySlug(locale, slug),
+  ["blog", "post-by-slug"],
+  { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
+);
 
-export async function getCategoryPage(
-  locale: Locale,
-  slug: string,
-  page: number,
-): Promise<BlogCategoryView | null> {
-  "use cache";
-  cacheTag(BLOG_CACHE_TAG);
-  cacheLife("weeks");
-  return queryCategoryPage(locale, slug, page);
-}
+export const getCategoryPage = unstable_cache(
+  (locale: Locale, slug: string, page: number) =>
+    queryCategoryPage(locale, slug, page),
+  ["blog", "category-page"],
+  { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
+);
+
+export const getPublishedPostIndex = unstable_cache(
+  () => queryPublishedPostIndex(),
+  ["blog", "published-post-index"],
+  { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
+);
+
+export const getCategoryIndex = unstable_cache(
+  () => queryCategoryIndex(),
+  ["blog", "category-index"],
+  { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
+);

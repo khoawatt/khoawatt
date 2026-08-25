@@ -11,7 +11,10 @@ import type {
   ThemeToggleMessages,
 } from "@/features/i18n/messages/types";
 import {
+  blogNavigationPath,
   navigationSectionIds,
+  primaryNavigationIds,
+  type NavigationItemId,
   type NavigationSectionId,
 } from "@/features/navigation/config";
 import { getLocalizedPathname } from "@/features/i18n/routing";
@@ -35,7 +38,7 @@ export function SiteHeader({
   themeToggleMessages,
 }: Readonly<SiteHeaderProps>) {
   const [activeSection, setActiveSection] =
-    useState<NavigationSectionId>("home");
+    useState<NavigationItemId>("home");
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
@@ -43,9 +46,18 @@ export function SiteHeader({
   const navigationRef = useRef<HTMLDivElement>(null);
   const restoreMenuFocusAfterLocaleRef = useRef(false);
   const homePath = getLocalizedPathname("/", locale);
+  const blogPath = getLocalizedPathname(blogNavigationPath, locale);
 
   useEffect(() => {
     function updateActiveSection() {
+      // Blog is a multi-route page link, not an anchor section: it is active on
+      // every blog route, independent of scroll position.
+      const blogPrefix = `${blogPath}/`;
+      if (window.location.pathname === blogPath || window.location.pathname.startsWith(blogPrefix)) {
+        setActiveSection("blog");
+        return;
+      }
+
       const headerBottom = headerRef.current?.getBoundingClientRect().bottom ?? 0;
       const marker = Math.max(headerBottom + 48, window.innerHeight * 0.45);
       let currentSection: NavigationSectionId = "home";
@@ -69,7 +81,7 @@ export function SiteHeader({
       window.removeEventListener("resize", updateActiveSection);
       window.removeEventListener("scroll", updateActiveSection);
     };
-  }, []);
+  }, [blogPath]);
 
   useEffect(() => {
     function updateScrolled() {
@@ -323,24 +335,37 @@ export function SiteHeader({
           >
             <nav aria-label={messages.primaryNavigation}>
               <ul className="site-navigation__list">
-                {navigationSectionIds.map((sectionId) => (
-                  <li key={sectionId}>
-                    <a
-                      aria-current={
-                        activeSection === sectionId ? "location" : undefined
-                      }
-                      className="site-navigation__link"
-                      href={sectionId === "home" ? homePath : `#${sectionId}`}
-                      onClick={(event) =>
-                        sectionId === "home"
-                          ? navigateHome(event)
-                          : navigateToSection(event, sectionId)
-                      }
-                    >
-                      {messages.sections[sectionId]}
-                    </a>
-                  </li>
-                ))}
+                {primaryNavigationIds.map((itemId) => {
+                  const isBlog = itemId === "blog";
+                  const href =
+                    isBlog
+                      ? blogPath
+                      : itemId === "home"
+                        ? homePath
+                        : `#${itemId}`;
+
+                  return (
+                    <li key={itemId}>
+                      <a
+                        aria-current={
+                          activeSection === itemId ? "location" : undefined
+                        }
+                        className="site-navigation__link"
+                        href={href}
+                        onClick={
+                          isBlog
+                            ? undefined
+                            : (event) =>
+                                itemId === "home"
+                                  ? navigateHome(event)
+                                  : navigateToSection(event, itemId)
+                        }
+                      >
+                        {messages.sections[itemId]}
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
             </nav>
 

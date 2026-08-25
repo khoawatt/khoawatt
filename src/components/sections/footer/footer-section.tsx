@@ -2,7 +2,10 @@ import { Container } from "@/components/layout/container";
 import type { FooterContentView } from "@/content/footer";
 import type { Locale } from "@/features/i18n/config";
 import type { HeaderMessages } from "@/features/i18n/messages/types";
-import { navigationSectionIds } from "@/features/navigation/config";
+import {
+  blogNavigationPath,
+  primaryNavigationIds,
+} from "@/features/navigation/config";
 import { getLocalizedPathname } from "@/features/i18n/routing";
 
 import { BackToTop } from "./back-to-top";
@@ -71,20 +74,22 @@ export function FooterSection({
               {content.navigationLabel}
             </h3>
             <ul className="site-footer__links">
-              {navigationSectionIds.map((sectionId) => (
-                <li key={sectionId}>
-                  <a
-                    className="site-footer__link"
-                    href={
-                      sectionId === "home"
-                        ? rootPath
-                        : `${rootPath}#${sectionId}`
-                    }
-                  >
-                    {messages.sections[sectionId]}
-                  </a>
-                </li>
-              ))}
+              {primaryNavigationIds.map((itemId) => {
+                const isBlog = itemId === "blog";
+                const href = isBlog
+                  ? getLocalizedPathname(blogNavigationPath, locale)
+                  : itemId === "home"
+                    ? rootPath
+                    : `${rootPath}#${itemId}`;
+
+                return (
+                  <li key={itemId}>
+                    <a className="site-footer__link" href={href}>
+                      {messages.sections[itemId]}
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           </nav>
 
