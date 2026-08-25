@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { Container } from "@/components/layout/container";
 import type { PostDetail } from "@/features/blog/types";
 import type { Locale } from "@/features/i18n/config";
 import type { BlogMessages } from "@/features/i18n/messages/types";
@@ -96,28 +97,31 @@ export function Article({ locale, messages, post }: Readonly<ArticleProps>) {
             dangerouslySetInnerHTML={{ __html: post.html }}
           />
 
-          {post.relatedPosts.length > 0 ? (
-            <section
-              aria-labelledby="related-posts-title"
-              className="blog-article__related"
-            >
-              <h2 className="blog-article__related-title" id="related-posts-title">
-                {messages.relatedPosts}
-              </h2>
-              <div className="blog-grid">
-                {post.relatedPosts.map((related) => (
-                  <PostCard
-                    key={related.slug}
-                    locale={locale}
-                    messages={messages}
-                    post={related}
-                  />
-                ))}
-              </div>
-            </section>
-          ) : null}
         </div>
       </div>
+
+      {post.relatedPosts.length > 0 ? (
+        <section
+          aria-labelledby="related-posts-title"
+          className="blog-article__related"
+        >
+          <Container>
+            <h2 className="blog-article__related-title" id="related-posts-title">
+              {messages.relatedPosts}
+            </h2>
+            <div className="blog-grid">
+              {post.relatedPosts.map((related) => (
+                <PostCard
+                  key={related.slug}
+                  locale={locale}
+                  messages={messages}
+                  post={related}
+                />
+              ))}
+            </div>
+          </Container>
+        </section>
+      ) : null}
     </article>
   );
 }
