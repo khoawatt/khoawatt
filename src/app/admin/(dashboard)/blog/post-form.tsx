@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -97,6 +97,32 @@ export function PostForm({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
 
+  // Live preview re-renders whenever the active locale's content changes.
+  const activeContentMd = localeTab === "en" ? contentMdEn : contentMdVi;
+  const activePreview = previewTab === localeTab ? previewHtml : null;
+
+  useEffect(() => {
+    if (previewTab !== localeTab) return;
+    let cancelled = false;
+
+    startTransition(async () => {
+      setIsPreviewing(true);
+      const result = await previewMarkdown(activeContentMd);
+      setIsPreviewing(false);
+      if (cancelled) return;
+      if (result.ok && result.html) {
+        setPreviewHtml(result.html);
+        setPreviewError(null);
+      } else {
+        setPreviewError(result.error ?? "Preview failed.");
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeContentMd, previewTab, localeTab]);
+
   function onTitleEnChange(value: string) {
     setTitleEn(value);
     if (!slugTouched) setSlug(slugify(value));
@@ -109,21 +135,9 @@ export function PostForm({
   }
 
   function runPreview(locale: LocaleTab) {
-    const markdown = locale === "en" ? contentMdEn : contentMdVi;
-    setPreviewTab(locale);
-    setPreviewHtml(null);
+    // Toggling the active preview tab triggers the live re-render effect.
+    setPreviewTab((current) => (current === locale ? null : locale));
     setPreviewError(null);
-    setIsPreviewing(true);
-
-    startTransition(async () => {
-      const result = await previewMarkdown(markdown);
-      setIsPreviewing(false);
-      if (result.ok && result.html) {
-        setPreviewHtml(result.html);
-      } else {
-        setPreviewError(result.error ?? "Preview failed.");
-      }
-    });
   }
 
   function addTag() {
@@ -182,238 +196,252 @@ export function PostForm({
 
   return (
     <form className="admin-form admin-form--blog" onSubmit={onSubmit}>
-      <label className="admin-field">
-        <span>Slug</span>
-        <input
-          name="slug"
-          onChange={(event) => {
-            setSlug(event.target.value);
-            setSlugTouched(true);
-          }}
-          required
-          value={slug}
-        />
-        {fieldErrors.slug ? <small className="admin-error">{fieldErrors.slug}</small> : null}
-      </label>
+      <div className="blog-post-editor">
+        {/* Left column: shared post fields */}
+        <div className="blog-post-editor__side">
+          <label className="admin-field">
+            <span>Slug</span>
+            <input
+              name="slug"
+              onChange={(event) => {
+                setSlug(event.target.value);
+                setSlugTouched(true);
+              }}
+              required
+              value={slug}
+            />
+            {fieldErrors.slug ? <small className="admin-error">{fieldErrors.slug}</small> : null}
+          </label>
 
-      <div className="admin-form-grid">
-        <label className="admin-field">
-          <span>Category</span>
-          <select
-            name="categoryId"
-            onChange={(event) => setCategoryId(event.target.value)}
-            required
-            value={categoryId}
-          >
-            <option value="">Select a category…</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.nameEn} / {category.nameVi}
-              </option>
-            ))}
-          </select>
-        </label>
+          <div className="admin-form-grid">
+            <label className="admin-field">
+              <span>Category</span>
+              <select
+                name="categoryId"
+                onChange={(event) => setCategoryId(event.target.value)}
+                required
+                value={categoryId}
+              >
+                <option value="">Select…</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.nameEn} / {category.nameVi}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-        <label className="admin-field">
-          <span>Status</span>
-          <select
-            name="status"
-            onChange={(event) =>
-              setStatus(event.target.value as "draft" | "published")
-            }
-            value={status}
-          >
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-          </select>
-        </label>
-      </div>
-
-      <fieldset className="admin-field">
-        <legend>Tags</legend>
-        {tags.length > 0 ? (
-          <div className="admin-check-group">
-            {tags.map((tag) => (
-              <label className="admin-check" key={tag.id}>
-                <input
-                  checked={tagIds.includes(tag.id)}
-                  onChange={() => toggleTag(tag.id)}
-                  type="checkbox"
-                />
-                <span>{tag.nameEn}</span>
-              </label>
-            ))}
+            <label className="admin-field">
+              <span>Status</span>
+              <select
+                name="status"
+                onChange={(event) =>
+                  setStatus(event.target.value as "draft" | "published")
+                }
+                value={status}
+              >
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+              </select>
+            </label>
           </div>
-        ) : (
-          <p className="admin-note">No tags yet.</p>
-        )}
-        <div className="admin-form-row">
-          <input
-            aria-label="New tag name"
-            onChange={(event) => setNewTagName(event.target.value)}
-            placeholder="Quick-add a tag"
-            value={newTagName}
-          />
-          <button disabled={isPending} onClick={addTag} type="button">
-            Add tag
-          </button>
-        </div>
-        {newTagError ? <p className="admin-error">{newTagError}</p> : null}
-      </fieldset>
 
-      <fieldset className="admin-field">
-        <legend>Cover (blog-media bucket)</legend>
-        {coverOptions.length === 0 ? (
-          <p className="admin-note">No media uploaded yet — upload under Admin → Media.</p>
-        ) : (
-          <div className="admin-check-group">
-            <label className="admin-check">
+          <fieldset className="admin-field">
+            <legend>Tags</legend>
+            {tags.length > 0 ? (
+              <div className="admin-check-group">
+                {tags.map((tag) => (
+                  <label className="admin-check" key={tag.id}>
+                    <input
+                      checked={tagIds.includes(tag.id)}
+                      onChange={() => toggleTag(tag.id)}
+                      type="checkbox"
+                    />
+                    <span>{tag.nameEn}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="admin-note">No tags yet.</p>
+            )}
+            <div className="admin-form-row">
               <input
-                checked={coverBucketPath === ""}
-                onChange={() => setCoverBucketPath("")}
-                type="radio"
-                name="cover"
+                aria-label="New tag name"
+                onChange={(event) => setNewTagName(event.target.value)}
+                placeholder="Quick-add a tag"
+                value={newTagName}
               />
-              <span>No cover</span>
-            </label>
-            {coverOptions.map((cover) => (
-              <label className="admin-check admin-check--media" key={cover.name}>
-                <input
-                  checked={coverBucketPath === cover.name}
-                  onChange={() => setCoverBucketPath(cover.name)}
-                  type="radio"
-                  name="cover"
-                />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img alt={cover.name} height={48} src={cover.url} width={64} />
-                <span>{cover.name}</span>
-              </label>
-            ))}
+              <button disabled={isPending} onClick={addTag} type="button">
+                Add
+              </button>
+            </div>
+            {newTagError ? <p className="admin-error">{newTagError}</p> : null}
+          </fieldset>
+
+          <fieldset className="admin-field">
+            <legend>Cover (blog-media)</legend>
+            {coverOptions.length === 0 ? (
+              <p className="admin-note">No media yet — upload under Admin → Media.</p>
+            ) : (
+              <div className="admin-check-group">
+                <label className="admin-check">
+                  <input
+                    checked={coverBucketPath === ""}
+                    onChange={() => setCoverBucketPath("")}
+                    type="radio"
+                    name="cover"
+                  />
+                  <span>No cover</span>
+                </label>
+                {coverOptions.map((cover) => (
+                  <label className="admin-check admin-check--media" key={cover.name}>
+                    <input
+                      checked={coverBucketPath === cover.name}
+                      onChange={() => setCoverBucketPath(cover.name)}
+                      type="radio"
+                      name="cover"
+                    />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img alt={cover.name} height={48} src={cover.url} width={64} />
+                    <span>{cover.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </fieldset>
+        </div>
+
+        {/* Right column: locale editor + live preview */}
+        <div className="blog-post-editor__main">
+          <div className="admin-locale-tabs" role="tablist" aria-label="Post language">
+            <button
+              aria-selected={localeTab === "en"}
+              onClick={() => setLocaleTab("en")}
+              role="tab"
+              type="button"
+            >
+              English
+            </button>
+            <button
+              aria-selected={localeTab === "vi"}
+              onClick={() => setLocaleTab("vi")}
+              role="tab"
+              type="button"
+            >
+              Tiếng Việt
+            </button>
           </div>
-        )}
-      </fieldset>
 
-      <div className="admin-locale-tabs" role="tablist" aria-label="Post language">
-        <button
-          aria-selected={localeTab === "en"}
-          onClick={() => setLocaleTab("en")}
-          role="tab"
-          type="button"
-        >
-          English
-        </button>
-        <button
-          aria-selected={localeTab === "vi"}
-          onClick={() => setLocaleTab("vi")}
-          role="tab"
-          type="button"
-        >
-          Tiếng Việt
-        </button>
-      </div>
+          <div role="tabpanel">
+            {localeTab === "en" ? (
+              <>
+                <label className="admin-field">
+                  <span>Title (EN)</span>
+                  <input
+                    onChange={(event) => onTitleEnChange(event.target.value)}
+                    required
+                    value={titleEn}
+                  />
+                  {fieldErrors.titleEn ? <small className="admin-error">{fieldErrors.titleEn}</small> : null}
+                </label>
+                <label className="admin-field">
+                  <span>Summary (EN)</span>
+                  <textarea
+                    onChange={(event) => setSummaryEn(event.target.value)}
+                    required
+                    rows={3}
+                    value={summaryEn}
+                  />
+                  {fieldErrors.summaryEn ? <small className="admin-error">{fieldErrors.summaryEn}</small> : null}
+                </label>
+                <label className="admin-field">
+                  <span>Markdown content (EN)</span>
+                  <div className="admin-form-row">
+                    <MediaInsertButton
+                      media={coverOptions}
+                      onInsert={(url, alt) => insertMarkdownImage("en", url, alt)}
+                    />
+                    <button
+                      className="admin-link-button"
+                      disabled={isPreviewing}
+                      onClick={() => runPreview("en")}
+                      type="button"
+                    >
+                      {isPreviewing ? "Rendering…" : "Preview EN"}
+                    </button>
+                  </div>
+                  <textarea
+                    className="admin-markdown"
+                    onChange={(event) => setContentMdEn(event.target.value)}
+                    ref={enContentRef}
+                    rows={16}
+                    value={contentMdEn}
+                  />
+                </label>
+              </>
+            ) : (
+              <>
+                <label className="admin-field">
+                  <span>Title (VI)</span>
+                  <input
+                    onChange={(event) => setTitleVi(event.target.value)}
+                    required
+                    value={titleVi}
+                  />
+                  {fieldErrors.titleVi ? <small className="admin-error">{fieldErrors.titleVi}</small> : null}
+                </label>
+                <label className="admin-field">
+                  <span>Summary (VI)</span>
+                  <textarea
+                    onChange={(event) => setSummaryVi(event.target.value)}
+                    required
+                    rows={3}
+                    value={summaryVi}
+                  />
+                  {fieldErrors.summaryVi ? <small className="admin-error">{fieldErrors.summaryVi}</small> : null}
+                </label>
+                <label className="admin-field">
+                  <span>Markdown content (VI)</span>
+                  <div className="admin-form-row">
+                    <MediaInsertButton
+                      media={coverOptions}
+                      onInsert={(url, alt) => insertMarkdownImage("vi", url, alt)}
+                    />
+                    <button
+                      className="admin-link-button"
+                      disabled={isPreviewing}
+                      onClick={() => runPreview("vi")}
+                      type="button"
+                    >
+                      {isPreviewing ? "Rendering…" : "Preview VI"}
+                    </button>
+                  </div>
+                  <textarea
+                    className="admin-markdown"
+                    onChange={(event) => setContentMdVi(event.target.value)}
+                    ref={viContentRef}
+                    rows={16}
+                    value={contentMdVi}
+                  />
+                </label>
+              </>
+            )}
+          </div>
 
-      <div role="tabpanel">
-        {localeTab === "en" ? (
-          <>
-            <label className="admin-field">
-              <span>Title (EN)</span>
-              <input
-                onChange={(event) => onTitleEnChange(event.target.value)}
-                required
-                value={titleEn}
+          {previewError ? (
+            <p className="admin-error" role="alert">{previewError}</p>
+          ) : null}
+          {activePreview ? (
+            <div className="admin-preview">
+              <h3>Live preview ({previewTab === "en" ? "EN" : "VI"})</h3>
+              <div
+                className="blog-article__prose"
+                dangerouslySetInnerHTML={{ __html: activePreview }}
               />
-              {fieldErrors.titleEn ? <small className="admin-error">{fieldErrors.titleEn}</small> : null}
-            </label>
-            <label className="admin-field">
-              <span>Summary (EN)</span>
-              <textarea
-                onChange={(event) => setSummaryEn(event.target.value)}
-                required
-                rows={3}
-                value={summaryEn}
-              />
-              {fieldErrors.summaryEn ? <small className="admin-error">{fieldErrors.summaryEn}</small> : null}
-            </label>
-            <label className="admin-field">
-              <span>Markdown content (EN)</span>
-              <div className="admin-form-row">
-                <MediaInsertButton
-                  media={coverOptions}
-                  onInsert={(url, alt) => insertMarkdownImage("en", url, alt)}
-                />
-              </div>
-              <textarea
-                className="admin-markdown"
-                onChange={(event) => setContentMdEn(event.target.value)}
-                ref={enContentRef}
-                rows={14}
-                value={contentMdEn}
-              />
-            </label>
-          </>
-        ) : (
-          <>
-            <label className="admin-field">
-              <span>Title (VI)</span>
-              <input
-                onChange={(event) => setTitleVi(event.target.value)}
-                required
-                value={titleVi}
-              />
-              {fieldErrors.titleVi ? <small className="admin-error">{fieldErrors.titleVi}</small> : null}
-            </label>
-            <label className="admin-field">
-              <span>Summary (VI)</span>
-              <textarea
-                onChange={(event) => setSummaryVi(event.target.value)}
-                required
-                rows={3}
-                value={summaryVi}
-              />
-              {fieldErrors.summaryVi ? <small className="admin-error">{fieldErrors.summaryVi}</small> : null}
-            </label>
-            <label className="admin-field">
-              <span>Markdown content (VI)</span>
-              <div className="admin-form-row">
-                <MediaInsertButton
-                  media={coverOptions}
-                  onInsert={(url, alt) => insertMarkdownImage("vi", url, alt)}
-                />
-              </div>
-              <textarea
-                className="admin-markdown"
-                onChange={(event) => setContentMdVi(event.target.value)}
-                ref={viContentRef}
-                rows={14}
-                value={contentMdVi}
-              />
-            </label>
-          </>
-        )}
-      </div>
-
-      <div className="admin-form-row">
-        <button
-          disabled={isPreviewing}
-          onClick={() => runPreview(localeTab)}
-          type="button"
-        >
-          {isPreviewing ? "Rendering…" : `Preview ${localeTab === "en" ? "EN" : "VI"}`}
-        </button>
-      </div>
-
-      {previewError ? (
-        <p className="admin-error" role="alert">{previewError}</p>
-      ) : null}
-      {previewTab && previewHtml ? (
-        <div className="admin-preview">
-          <h3>Preview ({previewTab === "en" ? "EN" : "VI"})</h3>
-          <div
-            className="blog-article__prose"
-            dangerouslySetInnerHTML={{ __html: previewHtml }}
-          />
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      </div>
 
       {error ? (
         <p className="admin-error" role="alert">

@@ -3583,6 +3583,11 @@ video {
   gap: 1.25rem;
 }
 
+.admin-form-card--wide {
+  max-width: none;
+  width: 100%;
+}
+
 .admin-sidebar__link:focus-visible,
 .admin-topbar__view:focus-visible,
 .admin-topbar__signout:focus-visible,
@@ -4251,7 +4256,37 @@ video {
 /* --- Blog admin (spec §9) --- */
 
 .admin-form--blog {
-  max-width: 44rem;
+  max-width: none;
+  width: 100%;
+}
+
+.blog-post-editor {
+  display: grid;
+  grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.blog-post-editor__side {
+  display: grid;
+  gap: 1rem;
+}
+
+.blog-post-editor__main {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.blog-post-editor__main .admin-markdown {
+  width: 100%;
+  min-height: 24rem;
+}
+
+@media (max-width: 960px) {
+  .blog-post-editor {
+    grid-template-columns: 1fr;
+  }
 }
 
 .admin-form-grid {

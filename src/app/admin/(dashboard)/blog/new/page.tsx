@@ -16,7 +16,7 @@ export default async function AdminNewPostPage() {
 
   return (
     <AdminPage backHref="/admin/blog" title="New post">
-      <AdminFormCard>
+      <AdminFormCard className="admin-form-card--wide">
         <h2>Post details</h2>
         <PostForm
           categories={categories}

@@ -40,11 +40,13 @@ export function AdminPage({
 
 interface AdminFormCardProps {
   children: ReactNode;
+  className?: string;
 }
 
 /** Card container for a form page's fields. */
-export function AdminFormCard({ children }: AdminFormCardProps) {
-  return <div className="admin-form-card">{children}</div>;
+export function AdminFormCard({ children, className }: AdminFormCardProps) {
+  const classes = ["admin-form-card", className].filter(Boolean).join(" ");
+  return <div className={classes}>{children}</div>;
 }
 
 interface AdminTableProps {
