@@ -181,6 +181,48 @@ export interface NewsletterSignup {
 
 If persistence is deferred, keep the UI disabled/marked appropriately rather than simulating a successful subscription.
 
+## Blog
+
+Blog entities live in Supabase (`blog_*` tables) following the CMS conventions — stable text ids, `_translations` child tables keyed `(entity_id, locale)`, and a publish gate inside the atomic mutation RPC that requires complete `en` + `vi` translations before a post can go live.
+
+```ts
+export interface BlogCategory {
+  slug: string;
+  name: LocalizedText;
+}
+
+export interface BlogTag {
+  slug: string;
+  name: LocalizedText;
+}
+
+export interface BlogPost {
+  slug: string;                 // one stable slug shared by both locales
+  title: LocalizedText;
+  summary: LocalizedText;
+  contentMd: LocalizedText;     // Markdown source, rendered by the shared pipeline
+  category: BlogCategory;
+  tags: BlogTag[];
+  coverImage?: ManagedImage;    // bucket path in the public 'blog-media' bucket
+  publishedAt?: string;         // ISO, stamped once on first publish
+  updatedAt?: string;
+  readingTimeMinutes: number;   // computed at render, never stored
+}
+
+export type ManagedImage = {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+};
+```
+
+Rules:
+
+- A post is publicly visible only when `status='published'`; the repository adapter enforces the published-only filter (fail-closed, like resume publicity).
+- `published_at` is stamped on the first successful publish and preserved on later edits (including unpublish/republish).
+- Missing translations resolve to `notFound()`, never a partial render.
+
 ## Future CMS mapping
 
 Recommended entities:
@@ -197,5 +239,8 @@ Recommended entities:
 - `resume_entry_translations`
 - `resume_media`
 - `social_links`
+- `blog_categories` (+ `blog_category_translations`)
+- `blog_tags` (+ `blog_tag_translations`)
+- `blog_posts` (+ `blog_post_translations`, `blog_post_tags`)
 
 Stable IDs and translation tables make locale additions possible without duplicating entire documents.
