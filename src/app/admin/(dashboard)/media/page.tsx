@@ -11,6 +11,7 @@ export const metadata = {
 const buckets: Array<{ id: MediaBucket; label: string; note: string }> = [
   { id: "resume-media", label: "Resume media (private)", note: "Served only through the gated /api/resume-media route." },
   { id: "project-media", label: "Project media (public)", note: "Public project images." },
+  { id: "blog-media", label: "Blog media (public)", note: "Public post covers and in-article images." },
   { id: "portfolio", label: "Portfolio (public)", note: "Profile / social images." },
 ];
 
