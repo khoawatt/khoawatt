@@ -24,6 +24,22 @@
     }
   },
 
+  // Agent-scoped tool availability. `vercel_update_project_deployment_protection`
+  // declares boolean `enabled` consts (oneOf `{ const: true }` / `{ const: false }`)
+  // which the Gemini API's strict tool-schema validation rejects, surfacing as
+  // "Invalid value at 'tools[0].function_declarations[56].parameters.properties[0].
+  // value.one_of[0].properties[0].value.enum[0]' (TYPE_STRING), true". This broke
+  // every Gemini-model subagent (including the vision agent) before any request
+  // could run. The tool stays available to non-Gemini agents; only the vision
+  // agent (which needs just the `read` tool for image files) stops declaring it.
+  "agent": {
+    "vision": {
+      "tools": {
+        "vercel_update_project_deployment_protection": false
+      }
+    }
+  },
+
   // Approved safe Git/GitHub permission policy.
   //
   // - Safe repository inspection, staging, and commits run without confirmation.
