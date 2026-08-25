@@ -47,6 +47,11 @@ const messages = {
     paginationPrev: "Trang trước",
     paginationNext: "Trang sau",
     pageNumberLabel: "Trang {n}",
+    topicsLabel: "Thư viện kiến thức",
+    topicsViewAll: "Tất cả chủ đề",
+    categoryPostCount: "{count} bài viết",
+    readMoreLabel: "Đọc bài viết",
+    backToTopLabel: "Lên đầu trang",
   },
   themeToggle: {
     toggle: "Chuyển giao diện màu",

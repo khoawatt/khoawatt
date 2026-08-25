@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { TocEntry } from "@/features/blog/types";
 
 interface TableOfContentsProps {
+  backToTopLabel: string;
   label: string;
   toc: TocEntry[];
 }
@@ -12,10 +13,14 @@ interface TableOfContentsProps {
 /**
  * Scroll-spy table of contents. Renders two variants sharing one active state:
  * a collapsed `<details>` (narrow screens, above the article) and a sticky
- * `<aside>` (wide screens, side rail). Only one is visible at a time, so only
- * one copy is focusable/announced.
+ * `<aside>` (wide screens, side rail with a back-to-top control). Only one is
+ * visible at a time, so only one copy is focusable/announced.
  */
-export function TableOfContents({ label, toc }: Readonly<TableOfContentsProps>) {
+export function TableOfContents({
+  backToTopLabel,
+  label,
+  toc,
+}: Readonly<TableOfContentsProps>) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -47,6 +52,17 @@ export function TableOfContents({ label, toc }: Readonly<TableOfContentsProps>) 
 
   if (toc.length === 0) return null;
 
+  function scrollToTop() {
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    window.scrollTo({
+      behavior: reduceMotion ? "auto" : "smooth",
+      top: 0,
+    });
+  }
+
   const list = (
     <nav aria-label={label} className="blog-toc__nav">
       <ol className="blog-toc__list">
@@ -69,15 +85,65 @@ export function TableOfContents({ label, toc }: Readonly<TableOfContentsProps>) 
     </nav>
   );
 
+  const titleIcon = (
+    <svg
+      aria-hidden="true"
+      className="blog-toc__title-icon"
+      fill="none"
+      height="16"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      width="16"
+    >
+      <path d="M3 6h13M3 12h13M3 18h9" />
+    </svg>
+  );
+
+  const backToTop = (
+    <button
+      aria-label={backToTopLabel}
+      className="blog-toc__top"
+      onClick={scrollToTop}
+      title={backToTopLabel}
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        fill="none"
+        height="16"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+        width="16"
+      >
+        <path d="m18 15-6-6-6 6" />
+      </svg>
+    </button>
+  );
+
   return (
     <>
       <details className="blog-toc blog-toc--narrow">
-        <summary className="blog-toc__summary">{label}</summary>
+        <summary className="blog-toc__summary">
+          {titleIcon}
+          {label}
+        </summary>
         {list}
       </details>
 
       <aside aria-label={label} className="blog-toc blog-toc--wide">
-        <p className="blog-toc__title">{label}</p>
+        <div className="blog-toc__head">
+          <p className="blog-toc__title">
+            {titleIcon}
+            {label}
+          </p>
+          {backToTop}
+        </div>
         {list}
       </aside>
     </>

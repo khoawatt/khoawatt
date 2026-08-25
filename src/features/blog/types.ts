@@ -44,3 +44,10 @@ export interface BlogCategoryView {
   name: string;
   listing: BlogListingView;
 }
+
+/** Category entry for the blog navigation chips (published-post counts). */
+export interface BlogCategoryNavEntry {
+  slug: string;
+  name: string;
+  postCount: number;
+}

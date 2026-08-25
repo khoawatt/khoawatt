@@ -5,6 +5,8 @@ import type { BlogMessages } from "@/features/i18n/messages/types";
 import { getLocalizedPathname } from "@/features/i18n/routing";
 
 interface PaginationProps {
+  /** Route prefix the numbered pages hang off, e.g. "/blog" or "/blog/category/x". */
+  basePath?: string;
   locale: Locale;
   messages: BlogMessages;
   page: number;
@@ -12,6 +14,7 @@ interface PaginationProps {
 }
 
 export function Pagination({
+  basePath = "/blog",
   locale,
   messages,
   page,
@@ -19,9 +22,9 @@ export function Pagination({
 }: Readonly<PaginationProps>) {
   if (totalPages <= 1) return null;
 
-  const base = getLocalizedPathname("/blog", locale);
+  const base = getLocalizedPathname(basePath, locale);
   const pageHref = (n: number) =>
-    n === 1 ? base : getLocalizedPathname(`/blog/page/${n}`, locale);
+    n === 1 ? base : getLocalizedPathname(`${basePath}/page/${n}`, locale);
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
 
   return (

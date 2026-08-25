@@ -23,6 +23,7 @@ if (!LOCAL_HOST.test(url)) {
 
 import { createClient } from "@supabase/supabase-js";
 import {
+  queryCategoryNav,
   queryCategoryPage,
   queryPostBySlug,
   queryPublishedPosts,
@@ -265,4 +266,19 @@ test("category page returns header + only that category's published posts", asyn
   assert.equal(vi?.name, "Kiến thức");
 
   assert.equal(await queryCategoryPage("en", "does-not-exist", 1), null);
+});
+
+test("category nav lists published categories with localized names and counts", async () => {
+  const en = await queryCategoryNav("en");
+  assert.deepEqual(
+    en.map((c) => ({ slug: c.slug, name: c.name, postCount: c.postCount })),
+    [
+      { slug: "knowledge", name: "Knowledge", postCount: 2 },
+      { slug: "reviews", name: "Reviews", postCount: 1 },
+    ],
+    "categories without published posts are excluded; ordered by sort_order",
+  );
+
+  const vi = await queryCategoryNav("vi");
+  assert.equal(vi[0]?.name, "Kiến thức");
 });

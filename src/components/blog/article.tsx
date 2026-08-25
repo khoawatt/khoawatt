@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Container } from "@/components/layout/container";
+import { getPortfolioProfile } from "@/content/profile";
 import type { PostDetail } from "@/features/blog/types";
 import type { Locale } from "@/features/i18n/config";
 import type { BlogMessages } from "@/features/i18n/messages/types";
@@ -19,6 +20,7 @@ interface ArticleProps {
 export function Article({ locale, messages, post }: Readonly<ArticleProps>) {
   const homePath = getLocalizedPathname("/", locale);
   const blogPath = getLocalizedPathname("/blog", locale);
+  const profile = getPortfolioProfile(locale);
   const localeTag = locale === "vi" ? "vi-VN" : "en-US";
   const date = new Intl.DateTimeFormat(localeTag, {
     year: "numeric",
@@ -35,7 +37,24 @@ export function Article({ locale, messages, post }: Readonly<ArticleProps>) {
       <nav aria-label={messages.breadcrumbLabel} className="blog-breadcrumb">
         <ol className="blog-breadcrumb__list">
           <li className="blog-breadcrumb__item">
-            <Link href={homePath}>{messages.homeLabel}</Link>
+            <Link href={homePath}>
+              <svg
+                aria-hidden="true"
+                className="blog-breadcrumb__icon"
+                fill="none"
+                height="14"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                width="14"
+              >
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <path d="M9 22V12h6v10" />
+              </svg>
+              <span className="sr-only">{messages.homeLabel}</span>
+            </Link>
           </li>
           <li className="blog-breadcrumb__item">
             <Link href={blogPath}>{messages.eyebrow}</Link>
@@ -47,28 +66,71 @@ export function Article({ locale, messages, post }: Readonly<ArticleProps>) {
       </nav>
 
       <div className="blog-article__layout">
-        <TableOfContents label={messages.onThisPage} toc={post.toc} />
+        <TableOfContents
+          backToTopLabel={messages.backToTopLabel}
+          label={messages.onThisPage}
+          toc={post.toc}
+        />
 
         <div className="blog-article__body">
           <header className="blog-article__header">
+            <Link
+              className="blog-article__chip"
+              href={getLocalizedPathname(
+                `/blog/category/${post.category.slug}`,
+                locale,
+              )}
+            >
+              {post.category.name}
+            </Link>
             <h1 className="blog-article__title">{post.title}</h1>
-            <p className="blog-article__meta">
-              <time dateTime={post.publishedAt}>
-                {messages.publishedLabel}: {date}
-              </time>
-              <span aria-hidden="true" className="blog-article__meta-separator">·</span>
-              <span>{readTime}</span>
-              <span aria-hidden="true" className="blog-article__meta-separator">·</span>
-              <Link
-                className="blog-article__category"
-                href={getLocalizedPathname(
-                  `/blog/category/${post.category.slug}`,
-                  locale,
-                )}
-              >
-                {post.category.name}
-              </Link>
-            </p>
+            <div className="blog-article__byline">
+              <span aria-hidden="true" className="blog-article__avatar">
+                <Image
+                  alt=""
+                  height={1280}
+                  src={profile.hero.image.src}
+                  style={{ objectPosition: profile.hero.image.focalPoint }}
+                  width={852}
+                />
+              </span>
+              <span className="blog-article__byline-name">
+                {profile.name}
+                <span className="blog-article__byline-role">{profile.role}</span>
+              </span>
+              <span className="blog-article__byline-meta">
+                <svg
+                  aria-hidden="true"
+                  fill="none"
+                  height="14"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  width="14"
+                >
+                  <rect height="18" rx="2" width="18" x="3" y="4" />
+                  <path d="M16 2v4M8 2v4M3 10h18" />
+                </svg>
+                <time dateTime={post.publishedAt}>{date}</time>
+                <svg
+                  aria-hidden="true"
+                  fill="none"
+                  height="14"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  width="14"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 6v6l4 2" />
+                </svg>
+                <span>{readTime}</span>
+              </span>
+            </div>
             {post.tags.length > 0 ? (
               <ul aria-label={messages.tagsLabel} className="blog-article__tags">
                 {post.tags.map((tag) => (
