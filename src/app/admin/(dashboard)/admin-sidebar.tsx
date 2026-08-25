@@ -118,9 +118,23 @@ const blogLinks: Array<{ href: string; label: string; icon: () => ReactNode }> =
   { href: "/admin/blog/categories", label: "Categories", icon: BlogIcon },
 ];
 
-function isActive(pathname: string, href: string): boolean {
+function matchesHref(pathname: string, href: string): boolean {
   if (href === "/admin/settings") return pathname === href;
-  return pathname.startsWith(href);
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/** Longest matching href wins, so `/admin/blog/categories` marks only the
+ *  Categories link active, never the sibling Posts link. */
+function activeHref(
+  pathname: string,
+  links: ReadonlyArray<{ href: string }>,
+): string | null {
+  const matched = links.filter((link) => matchesHref(pathname, link.href));
+  if (matched.length === 0) return null;
+  return matched.reduce(
+    (longest, link) => (link.href.length > longest.href.length ? link : longest),
+    matched[0],
+  ).href;
 }
 
 function SidebarLinks({
@@ -130,11 +144,12 @@ function SidebarLinks({
   links: Array<{ href: string; label: string; icon: () => ReactNode }>;
   pathname: string;
 }) {
+  const current = activeHref(pathname, links);
   return links.map((link) => {
     const Icon = link.icon;
     return (
       <Link
-        aria-current={isActive(pathname, link.href) ? "page" : undefined}
+        aria-current={link.href === current ? "page" : undefined}
         className="admin-sidebar__link"
         href={link.href}
         key={link.href}
