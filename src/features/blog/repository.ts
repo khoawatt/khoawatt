@@ -332,6 +332,49 @@ export async function queryCategoryIndex(): Promise<{ slug: string }[]> {
   }
 }
 
+export interface RssPostRow {
+  title: string;
+  slug: string;
+  summary: string;
+  publishedAt: string;
+}
+
+/** Uncached core: latest published posts for the RSS feed (spec §7). */
+export async function queryRssPosts(
+  locale: Locale,
+  limit = 20,
+): Promise<RssPostRow[]> {
+  const client = getServiceClient();
+  if (!hasCmsConfig() || !client) return [];
+
+  try {
+    const { data, error } = await client
+      .from("blog_posts")
+      .select(postSelect())
+      .eq("status", "published")
+      .order("published_at", { ascending: false })
+      .order("id")
+      .limit(limit);
+    if (error || !data) return [];
+
+    return (data as unknown as PostRow[])
+      .map((row) => {
+        const item = mapPostListItem(row, locale);
+        return item
+          ? {
+              title: item.title,
+              slug: item.slug,
+              summary: item.summary,
+              publishedAt: item.publishedAt,
+            }
+          : null;
+      })
+      .filter((row): row is RssPostRow => row !== null);
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Cached public accessors. Every read is tagged `blog` at the single choke
  * point; `updateTag("blog")` from an admin Server Action invalidates them all
@@ -367,5 +410,11 @@ export const getPublishedPostIndex = unstable_cache(
 export const getCategoryIndex = unstable_cache(
   () => queryCategoryIndex(),
   ["blog", "category-index"],
+  { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
+);
+
+export const getRssPosts = unstable_cache(
+  (locale: Locale) => queryRssPosts(locale, 20),
+  ["blog", "rss-posts"],
   { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
 );

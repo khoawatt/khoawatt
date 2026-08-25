@@ -72,17 +72,9 @@ export function getBlogPostMetadata(
   const dateModified = post.updatedAt
     ? new Date(post.updatedAt).toISOString()
     : datePublished;
-  const images = post.coverImage
-    ? [
-        {
-          url: getAbsoluteUrl(post.coverImage.src),
-          width: post.coverImage.width,
-          height: post.coverImage.height,
-          alt: post.coverImage.alt,
-        },
-      ]
-    : undefined;
 
+  // The OG image comes from the file-based `opengraph-image.tsx` (auto-generated
+  // branded card, spec §7); no metadata image is set here to avoid duplication.
   return getSeoMetadata({
     locale,
     title: post.title,
@@ -95,7 +87,6 @@ export function getBlogPostMetadata(
       siteName: metadataTitle,
       title: post.title,
       description: post.summary,
-      images,
       publishedTime: datePublished,
       modifiedTime: dateModified,
       tags: post.tags.map((tag) => tag.name),
@@ -104,7 +95,6 @@ export function getBlogPostMetadata(
       card: "summary_large_image",
       title: post.title,
       description: post.summary,
-      images: post.coverImage ? [getAbsoluteUrl(post.coverImage.src)] : undefined,
     },
   });
 }

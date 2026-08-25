@@ -8,6 +8,7 @@ import { portfolioProfile } from "@/content/profile";
 import { locales } from "@/features/i18n/config";
 import { getMessages } from "@/features/i18n/messages";
 import { getLocaleFromParams } from "@/features/i18n/server";
+import { getLocalizedPathname } from "@/features/i18n/routing";
 import { ThemeProvider } from "@/features/theme/theme-provider";
 import { ThemeScript } from "@/features/theme/theme-script";
 
@@ -34,6 +35,13 @@ export default async function LocaleLayout({
     <html data-theme="light" lang={locale} suppressHydrationWarning>
       <head>
         <ThemeScript />
+        {/* RSS autodiscovery (spec §7): `/feed.xml` (en) / `/vi/feed.xml` (vi) */}
+        <link
+          href={getLocalizedPathname("/feed.xml", locale)}
+          rel="alternate"
+          title="RSS"
+          type="application/rss+xml"
+        />
       </head>
       <body>
         <StructuredData locale={locale} />
