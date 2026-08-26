@@ -1,5 +1,4 @@
 import { getServerClient } from "@/features/cms/session";
-import { listBucketObjects } from "@/features/cms/media";
 
 export interface AdminPostRow {
   id: string;
@@ -191,8 +190,4 @@ export async function listTags(): Promise<AdminTagRow[]> {
       nameVi: vi?.name ?? "",
     };
   });
-}
-
-export async function listBlogMedia() {
-  return listBucketObjects("blog-media");
 }

@@ -44,6 +44,33 @@ const COVER_FRAME = { width: 800, height: 450 };
 /** Safety net only: refresh cached reads at most this often if `updateTag` is missed. */
 const BLOG_SAFETY_NET_SECONDS = 60 * 60 * 24;
 
+/**
+ * Cover alt text from the media_assets catalog (issue #102), keyed by locale.
+ * Falls back to null when the catalog has no row (a legacy/migrated cover).
+ * Cached under the blog tag so a catalog edit invalidates alongside posts.
+ */
+const getCoverAlt = unstable_cache(
+  async (path: string, locale: Locale): Promise<string | null> => {
+    const client = getServiceClient();
+    if (!hasCmsConfig() || !client) return null;
+    try {
+      const { data, error } = await client
+        .from("media_assets")
+        .select("alt_en, alt_vi, title")
+        .eq("bucket", "blog-media")
+        .eq("path", path)
+        .maybeSingle();
+      if (error || !data) return null;
+      const alt = locale === "vi" ? data.alt_vi : data.alt_en;
+      return (alt ?? "").trim() || data.title || null;
+    } catch {
+      return null;
+    }
+  },
+  ["blog-cover-alt"],
+  { tags: [BLOG_CACHE_TAG] },
+);
+
 interface CategoryNameRow {
   locale: string;
   name: string;
@@ -92,7 +119,7 @@ function localeRow<T extends { locale: string }>(
 }
 
 /** Map a row → listing item for the requested locale, or null when not renderable. */
-function mapPostListItem(row: PostRow, locale: Locale): PostListItem | null {
+async function mapPostListItem(row: PostRow, locale: Locale): Promise<PostListItem | null> {
   const translation = localeRow(row.blog_post_translations, locale);
   const category = row.blog_categories;
   const categoryName = localeRow(category?.blog_category_translations, locale);
@@ -101,7 +128,7 @@ function mapPostListItem(row: PostRow, locale: Locale): PostListItem | null {
   const coverImage = row.cover_bucket_path
     ? {
         src: getMediaPublicUrl("blog-media", row.cover_bucket_path),
-        alt: translation.title,
+        alt: (await getCoverAlt(row.cover_bucket_path, locale)) ?? translation.title,
         width: COVER_FRAME.width,
         height: COVER_FRAME.height,
       }
@@ -151,9 +178,10 @@ async function loadPublishedPosts(
     const { data, error, count } = await query;
     if (error || !data) return { posts: [], page, totalPages: 1 };
 
-    const posts = (data as unknown as PostRow[])
-      .map((row) => mapPostListItem(row, locale))
-      .filter((post): post is PostListItem => post !== null);
+    const rows = data as unknown as PostRow[];
+    const posts = (
+      await Promise.all(rows.map((row) => mapPostListItem(row, locale)))
+    ).filter((post): post is PostListItem => post !== null);
 
     return {
       posts,
@@ -183,16 +211,19 @@ async function queryRelatedPosts(
       .limit(50);
     if (error || !data) return [];
 
-    const scored = (data as unknown as PostRow[])
-      .map((row) => {
-        const item = mapPostListItem(row, locale);
-        if (!item) return null;
-        const shared = (row.blog_post_tags ?? []).filter((link) =>
-          tagIds.includes(link.tag_id),
-        ).length;
-        return { item, shared };
-      })
-      .filter((entry): entry is { item: PostListItem; shared: number } => entry !== null)
+    const rows = data as unknown as PostRow[];
+    const scored = (
+      await Promise.all(
+        rows.map(async (row) => {
+          const item = await mapPostListItem(row, locale);
+          if (!item) return null;
+          const shared = (row.blog_post_tags ?? []).filter((link) =>
+            tagIds.includes(link.tag_id),
+          ).length;
+          return { item, shared };
+        }),
+      )
+    ).filter((entry): entry is { item: PostListItem; shared: number } => entry !== null)
       .sort(
         (a, b) =>
           b.shared - a.shared ||
@@ -235,7 +266,7 @@ export async function queryPostBySlug(
     if (error || !data) return null;
 
     const row = data as unknown as PostRow;
-    const item = mapPostListItem(row, locale);
+    const item = await mapPostListItem(row, locale);
     const translation = localeRow(row.blog_post_translations, locale);
     if (!item || !translation) return null;
 
@@ -392,19 +423,22 @@ export async function queryRssPosts(
       .limit(limit);
     if (error || !data) return [];
 
-    return (data as unknown as PostRow[])
-      .map((row) => {
-        const item = mapPostListItem(row, locale);
-        return item
-          ? {
-              title: item.title,
-              slug: item.slug,
-              summary: item.summary,
-              publishedAt: item.publishedAt,
-            }
-          : null;
-      })
-      .filter((row): row is RssPostRow => row !== null);
+    const rows = data as unknown as PostRow[];
+    return (
+      await Promise.all(
+        rows.map(async (row) => {
+          const item = await mapPostListItem(row, locale);
+          return item
+            ? {
+                title: item.title,
+                slug: item.slug,
+                summary: item.summary,
+                publishedAt: item.publishedAt,
+              }
+            : null;
+        }),
+      )
+    ).filter((row): row is RssPostRow => row !== null);
   } catch {
     return [];
   }

@@ -13,16 +13,10 @@ import {
   type BlogPostFormData,
 } from "./actions";
 import type { AdminCategoryRow, AdminPostRow, AdminTagRow } from "./data";
-import { MediaInsertButton } from "./media-insert";
-
-interface CoverOption {
-  name: string;
-  url: string;
-}
+import { MediaPickerModal } from "@/features/cms/media-picker-modal";
 
 interface PostFormProps {
   categories: AdminCategoryRow[];
-  coverOptions: CoverOption[];
   existing?: AdminPostRow;
   tags: AdminTagRow[];
 }
@@ -41,7 +35,6 @@ function slugify(value: string): string {
 
 export function PostForm({
   categories,
-  coverOptions,
   existing,
   tags,
 }: Readonly<PostFormProps>) {
@@ -89,8 +82,32 @@ export function PostForm({
     });
   }
 
+  function openPicker(surface: "cover" | LocaleTab) {
+    setPickerSurface(surface);
+    setPickerOpen(true);
+  }
+
+  function handlePickCover(selection: { path: string; url: string; title: string; alt: string }) {
+    setCoverBucketPath(selection.path);
+  }
+
+  function handlePickInsert(selection: { path: string; url: string; title: string; alt: string }) {
+    if (pickerSurface === "en" || pickerSurface === "vi") {
+      insertMarkdownImage(pickerSurface, selection.url, selection.alt || selection.title);
+    }
+  }
+
+  function handlePickerSelect(selection: { path: string; url: string; title: string; alt: string }) {
+    if (pickerSurface === "cover") handlePickCover(selection);
+    else handlePickInsert(selection);
+  }
+
   const [newTagName, setNewTagName] = useState("");
   const [newTagError, setNewTagError] = useState<string | null>(null);
+
+  // Shared media picker state: which surface opened it ("cover" | "en" | "vi").
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSurface, setPickerSurface] = useState<"cover" | LocaleTab | null>(null);
 
   const [previewTab, setPreviewTab] = useState<LocaleTab | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
@@ -280,34 +297,20 @@ export function PostForm({
 
           <fieldset className="admin-field">
             <legend>Cover (blog-media)</legend>
-            {coverOptions.length === 0 ? (
-              <p className="admin-note">No media yet — upload under Admin → Media.</p>
-            ) : (
-              <div className="admin-check-group">
-                <label className="admin-check">
-                  <input
-                    checked={coverBucketPath === ""}
-                    onChange={() => setCoverBucketPath("")}
-                    type="radio"
-                    name="cover"
-                  />
-                  <span>No cover</span>
-                </label>
-                {coverOptions.map((cover) => (
-                  <label className="admin-check admin-check--media" key={cover.name}>
-                    <input
-                      checked={coverBucketPath === cover.name}
-                      onChange={() => setCoverBucketPath(cover.name)}
-                      type="radio"
-                      name="cover"
-                    />
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img alt={cover.name} height={48} src={cover.url} width={64} />
-                    <span>{cover.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
+            <div className="admin-form-row">
+              <input
+                aria-label="Cover image path"
+                onChange={(event) => setCoverBucketPath(event.target.value)}
+                placeholder="No cover"
+                value={coverBucketPath}
+              />
+              <button onClick={() => openPicker("cover")} type="button">
+                Pick from library
+              </button>
+            </div>
+            {coverBucketPath ? (
+              <p className="admin-note">Selected: {coverBucketPath}</p>
+            ) : null}
           </fieldset>
         </div>
 
@@ -357,10 +360,13 @@ export function PostForm({
                 <label className="admin-field">
                   <span>Markdown content (EN)</span>
                   <div className="admin-form-row">
-                    <MediaInsertButton
-                      media={coverOptions}
-                      onInsert={(url, alt) => insertMarkdownImage("en", url, alt)}
-                    />
+                    <button
+                      className="admin-link-button"
+                      onClick={() => openPicker("en")}
+                      type="button"
+                    >
+                      Insert image
+                    </button>
                     <button
                       className="admin-link-button"
                       disabled={isPreviewing}
@@ -407,10 +413,13 @@ export function PostForm({
                 <label className="admin-field">
                   <span>Markdown content (VI)</span>
                   <div className="admin-form-row">
-                    <MediaInsertButton
-                      media={coverOptions}
-                      onInsert={(url, alt) => insertMarkdownImage("vi", url, alt)}
-                    />
+                    <button
+                      className="admin-link-button"
+                      onClick={() => openPicker("vi")}
+                      type="button"
+                    >
+                      Insert image
+                    </button>
                     <button
                       className="admin-link-button"
                       disabled={isPreviewing}
@@ -463,6 +472,14 @@ export function PostForm({
         </button>
         <Link href="/admin/blog">Cancel</Link>
       </div>
+
+      <MediaPickerModal
+        bucket="blog-media"
+        defaultAlt={pickerSurface === "cover" ? titleEn || titleVi || "" : ""}
+        onClose={() => setPickerOpen(false)}
+        onSelect={handlePickerSelect}
+        open={pickerOpen}
+      />
     </form>
   );
 }

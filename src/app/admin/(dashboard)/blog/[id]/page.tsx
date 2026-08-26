@@ -2,8 +2,7 @@ import { notFound } from "next/navigation";
 
 import { getPost } from "../data";
 import { PostForm } from "../post-form";
-import { listCategories, listBlogMedia, listTags } from "../data";
-import { getMediaPublicUrl } from "@/features/cms/media";
+import { listCategories, listTags } from "../data";
 import { AdminFormCard, AdminPage } from "../../admin-page";
 
 interface AdminEditPostPageProps {
@@ -24,25 +23,16 @@ export default async function AdminEditPostPage({
     notFound();
   }
 
-  const [categories, tags, media] = await Promise.all([
+  const [categories, tags] = await Promise.all([
     listCategories(),
     listTags(),
-    listBlogMedia(),
   ]);
 
   return (
     <AdminPage backHref="/admin/blog" title="Edit post">
       <AdminFormCard className="admin-form-card--wide">
         <h2>Post details</h2>
-        <PostForm
-          categories={categories}
-          coverOptions={media.map((object) => ({
-            name: object.name,
-            url: getMediaPublicUrl("blog-media", object.name),
-          }))}
-          existing={post}
-          tags={tags}
-        />
+        <PostForm categories={categories} existing={post} tags={tags} />
       </AdminFormCard>
     </AdminPage>
   );
