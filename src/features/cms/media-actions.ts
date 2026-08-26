@@ -4,17 +4,32 @@ import { revalidatePath } from "next/cache";
 
 import { getServerClient, isAdminUser } from "./session";
 import { findMediaReferences, type MediaBucket } from "./media";
+import { imageDimensions } from "./image-dimensions";
+import {
+  deleteMediaAsset,
+  updateMediaAssetMeta,
+  upsertMediaAsset,
+} from "./media-catalog";
 
 export interface MediaUploadResult {
   ok: boolean;
   error?: string;
   path?: string;
   publicUrl?: string;
+  /** Upload succeeded but the metadata row write failed; edit later. */
+  warning?: string;
 }
 
 export interface MediaDeleteResult {
   ok: boolean;
   error?: string;
+}
+
+/** Optional editable metadata supplied alongside a new upload (#102). */
+export interface MediaUploadMeta {
+  title?: string;
+  altEn?: string;
+  altVi?: string;
 }
 
 function isAllowedMime(mime: string): boolean {
@@ -31,10 +46,15 @@ function sanitizeFilename(filename: string): string {
  * server client (getServerClient), so Storage RLS (private.is_owner()) authorizes
  * the actual operation — matching the accepted #18 design where admin/browser
  * writes use the normal owner RLS path rather than the service role.
+ *
+ * After Storage accepts the bytes, dimensions are parsed from the buffer and a
+ * media_assets catalog row is written (#102); a failed catalog write degrades
+ * to a warning because the file itself is usable.
  */
 export async function uploadMedia(
   bucket: MediaBucket,
   file: File,
+  meta?: MediaUploadMeta,
 ): Promise<MediaUploadResult> {
   if (!(await isAdminUser())) return { ok: false, error: "Unauthorized." };
 
@@ -63,8 +83,28 @@ export async function uploadMedia(
     ? `/api/resume-media/${encodeURIComponent(path)}`
     : client.storage.from(bucket).getPublicUrl(path).data.publicUrl;
 
+  const dimensions = imageDimensions(new Uint8Array(arrayBuffer), file.type);
+
+  let warning: string | undefined;
+  try {
+    await upsertMediaAsset(client, {
+      altEn: meta?.altEn,
+      altVi: meta?.altVi,
+      bucket,
+      height: dimensions?.height ?? null,
+      mime: file.type,
+      path,
+      sizeBytes: file.size,
+      title: meta?.title,
+      width: dimensions?.width ?? null,
+    });
+  } catch {
+    warning =
+      "Uploaded, but saving metadata failed. You can edit this image's details later.";
+  }
+
   revalidatePath("/admin/media");
-  return { ok: true, path, publicUrl };
+  return { ok: true, path, publicUrl, warning };
 }
 
 export async function deleteMedia(
@@ -97,8 +137,39 @@ export async function deleteMedia(
   const { error } = await client.storage.from(bucket).remove([path]);
   if (error) return { ok: false, error: error.message };
 
+  // Keep the catalog aligned with Storage; a stale row would render as a ghost
+  // grid entry whose thumbnail 404s.
+  await deleteMediaAsset(client, bucket, path);
+
   revalidatePath("/");
   revalidatePath("/vi");
+  revalidatePath("/admin/media");
+  return { ok: true };
+}
+
+export interface MediaDetailsResult {
+  ok: boolean;
+  error?: string;
+}
+
+/** Editable metadata for one asset (#102) — title + bilingual alt text. */
+export async function updateMediaDetails(
+  bucket: MediaBucket,
+  path: string,
+  meta: { altEn: string; altVi: string; title: string },
+): Promise<MediaDetailsResult> {
+  if (!(await isAdminUser())) return { ok: false, error: "Unauthorized." };
+  if (!meta.title.trim()) {
+    return { ok: false, error: "Title is required." };
+  }
+
+  const client = await getServerClient();
+  try {
+    await updateMediaAssetMeta(client, bucket, path, meta);
+  } catch {
+    return { ok: false, error: "Could not save the media details. Retry shortly." };
+  }
+
   revalidatePath("/admin/media");
   return { ok: true };
 }
