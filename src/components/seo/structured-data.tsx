@@ -1,4 +1,5 @@
-import { getPortfolioProfile } from "@/content/profile";
+import { getPortfolioProfile as getCmsProfile } from "@/features/cms/repository";
+import { getSocialLinks } from "@/features/cms/repository";
 import type { Locale } from "@/features/i18n/config";
 import { getMessages } from "@/features/i18n/messages";
 import { getLocalizedPathname } from "@/features/i18n/routing";
@@ -12,8 +13,16 @@ export async function StructuredData({
   locale,
 }: Readonly<StructuredDataProps>) {
   const messages = await getMessages(locale);
-  const profile = getPortfolioProfile(locale);
+  const profile = await getCmsProfile(locale);
+  const socials = await getSocialLinks(locale);
   const url = getAbsoluteUrl(getLocalizedPathname("/", locale));
+
+  // sameAs should never include the CMS placeholder hrefs (`#`), so we only
+  // take https links from the canonical socials accessor plus the GitHub URL.
+  const sameAs = [
+    profile.githubUrl,
+    ...socials.map((social) => social.href),
+  ].filter((href) => href.startsWith("https://"));
 
   const graph = {
     "@context": "https://schema.org",
@@ -25,7 +34,7 @@ export async function StructuredData({
         url,
         image: getAbsoluteUrl(profile.hero.image.src),
         jobTitle: profile.role,
-        sameAs: [profile.githubUrl],
+        sameAs,
       },
       {
         "@type": "WebSite",
