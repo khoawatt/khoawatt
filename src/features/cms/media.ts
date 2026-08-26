@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServerClient } from "./session";
+import { publicMediaUrl } from "./media-url";
 
 export type MediaBucket = "resume-media" | "project-media" | "portfolio" | "blog-media";
 
@@ -28,12 +29,7 @@ export async function listBucketObjects(
 }
 
 export function getMediaPublicUrl(bucket: MediaBucket, path: string): string {
-  if (bucket === "resume-media") {
-    return `/api/resume-media/${encodeURIComponent(path)}`;
-  }
-  // Public buckets expose a fixed public URL built from the public env URL.
-  const base = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/, "");
-  return `${base}/storage/v1/object/public/${bucket}/${encodeURIComponent(path)}`;
+  return publicMediaUrl(bucket, path);
 }
 
 /** Escape LIKE wildcards so a stored path can never broaden the reference match. */

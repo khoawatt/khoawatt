@@ -14,15 +14,11 @@ import {
 } from "./actions";
 import type { AdminCategoryRow, AdminPostRow, AdminTagRow } from "./data";
 import { MediaInsertButton } from "./media-insert";
-
-interface CoverOption {
-  name: string;
-  url: string;
-}
+import { MediaPickerModal } from "../media/media-picker-modal";
+import { publicMediaUrl } from "@/features/cms/media-url";
 
 interface PostFormProps {
   categories: AdminCategoryRow[];
-  coverOptions: CoverOption[];
   existing?: AdminPostRow;
   tags: AdminTagRow[];
 }
@@ -41,7 +37,6 @@ function slugify(value: string): string {
 
 export function PostForm({
   categories,
-  coverOptions,
   existing,
   tags,
 }: Readonly<PostFormProps>) {
@@ -49,6 +44,8 @@ export function PostForm({
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
+
+  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
 
   const [localeTab, setLocaleTab] = useState<LocaleTab>("en");
   const [slug, setSlug] = useState(existing?.slug ?? "");
@@ -72,13 +69,24 @@ export function PostForm({
   const enContentRef = useRef<HTMLTextAreaElement>(null);
   const viContentRef = useRef<HTMLTextAreaElement>(null);
 
-  function insertMarkdownImage(tab: LocaleTab, url: string, alt: string) {
+  function insertMarkdownImage(
+    tab: LocaleTab,
+    image: { url: string; altEn: string; altVi: string },
+  ) {
     const textarea = tab === "en" ? enContentRef.current : viContentRef.current;
     const value = tab === "en" ? contentMdEn : contentMdVi;
     const setter = tab === "en" ? setContentMdEn : setContentMdVi;
 
+    // Catalog alt text wins; fall back to a readable name from the URL.
+    const fallback = decodeURIComponent(image.url.split("/").pop() ?? "")
+      .replace(/\.[^.]+$/, "")
+      .replace(/^\d+-/, "")
+      .replace(/[-_]+/g, " ");
+    const alt =
+      (tab === "en" ? image.altEn : image.altVi).trim() || fallback;
+
     const position = textarea?.selectionStart ?? value.length;
-    const markdown = `![${alt}](${url})`;
+    const markdown = `![${alt}](${image.url})`;
     setter(`${value.slice(0, position)}${markdown}${value.slice(position)}`);
 
     window.requestAnimationFrame(() => {
@@ -280,35 +288,49 @@ export function PostForm({
 
           <fieldset className="admin-field">
             <legend>Cover (blog-media)</legend>
-            {coverOptions.length === 0 ? (
-              <p className="admin-note">No media yet — upload under Admin → Media.</p>
+            {coverBucketPath ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                alt="Selected cover preview"
+                className="admin-cover-preview"
+                height={90}
+                src={publicMediaUrl("blog-media", coverBucketPath)}
+                width={160}
+              />
             ) : (
-              <div className="admin-check-group">
-                <label className="admin-check">
-                  <input
-                    checked={coverBucketPath === ""}
-                    onChange={() => setCoverBucketPath("")}
-                    type="radio"
-                    name="cover"
-                  />
-                  <span>No cover</span>
-                </label>
-                {coverOptions.map((cover) => (
-                  <label className="admin-check admin-check--media" key={cover.name}>
-                    <input
-                      checked={coverBucketPath === cover.name}
-                      onChange={() => setCoverBucketPath(cover.name)}
-                      type="radio"
-                      name="cover"
-                    />
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img alt={cover.name} height={48} src={cover.url} width={64} />
-                    <span>{cover.name}</span>
-                  </label>
-                ))}
-              </div>
+              <p className="admin-note">No cover selected.</p>
             )}
+            <div className="admin-form-row">
+              <button
+                className="admin-link-button"
+                onClick={() => setCoverPickerOpen(true)}
+                type="button"
+              >
+                {coverBucketPath ? "Change cover…" : "Choose cover…"}
+              </button>
+              {coverBucketPath ? (
+                <button
+                  className="admin-link-button admin-link-button--danger"
+                  onClick={() => setCoverBucketPath("")}
+                  type="button"
+                >
+                  Remove
+                </button>
+              ) : null}
+            </div>
+            {coverBucketPath ? (
+              <small className="admin-hint">{coverBucketPath}</small>
+            ) : null}
           </fieldset>
+          <MediaPickerModal
+            bucket="blog-media"
+            onClose={() => setCoverPickerOpen(false)}
+            onSelect={(asset) => {
+              setCoverBucketPath(asset.path);
+              setCoverPickerOpen(false);
+            }}
+            open={coverPickerOpen}
+          />
         </div>
 
         {/* Right column: locale editor + live preview */}
@@ -358,8 +380,7 @@ export function PostForm({
                   <span>Markdown content (EN)</span>
                   <div className="admin-form-row">
                     <MediaInsertButton
-                      media={coverOptions}
-                      onInsert={(url, alt) => insertMarkdownImage("en", url, alt)}
+                      onInsert={(image) => insertMarkdownImage("en", image)}
                     />
                     <button
                       className="admin-link-button"
@@ -408,8 +429,7 @@ export function PostForm({
                   <span>Markdown content (VI)</span>
                   <div className="admin-form-row">
                     <MediaInsertButton
-                      media={coverOptions}
-                      onInsert={(url, alt) => insertMarkdownImage("vi", url, alt)}
+                      onInsert={(image) => insertMarkdownImage("vi", image)}
                     />
                     <button
                       className="admin-link-button"

@@ -25,6 +25,7 @@ import { unstable_cache } from "next/cache";
 
 import { hasCmsConfig } from "@/features/cms/config";
 import { getMediaPublicUrl } from "@/features/cms/media";
+import { getCoverAltTexts } from "@/features/cms/media-catalog";
 import { getServiceClient } from "@/features/cms/server";
 import { renderMarkdown } from "./markdown";
 import { readingTimeMinutes } from "./reading-time";
@@ -119,8 +120,40 @@ function mapPostListItem(row: PostRow, locale: Locale): PostListItem | null {
   };
 }
 
-function postSelect() {
-  return [
+/**
+ * Override cover alt text from the media_assets catalog (#102) when the owner
+ * has written one for the requested locale; the post title stays the fallback.
+ */
+async function enrichCoverAlts<T extends { coverImage?: { alt: string } }>(
+  items: T[],
+  coverPaths: (string | undefined)[],
+  locale: Locale,
+): Promise<T[]> {
+  const paths = [...new Set(coverPaths.filter((p): p is string => Boolean(p)))];
+  if (paths.length === 0) return items;
+
+  const client = getServiceClient();
+  if (!client) return items;
+
+  try {
+    const alts = await getCoverAltTexts(client, "blog-media", paths);
+    if (alts.size === 0) return items;
+
+    let index = 0;
+    return items.map((item) => {
+      const path = coverPaths[index++];
+      const lookup = path ? alts.get(path) : undefined;
+      if (!lookup || !item.coverImage) return item;
+      const catalogAlt = locale === "vi" ? lookup.altVi : lookup.altEn;
+      if (!catalogAlt.trim()) return item;
+      return { ...item, coverImage: { ...item.coverImage, alt: catalogAlt } };
+    });
+  } catch {
+    return items;
+  }
+}
+
+function postSelect() {  return [
     "id, slug, cover_bucket_path, status, published_at, updated_at",
     "blog_categories(id, slug, blog_category_translations(locale, name))",
     "blog_post_translations(locale, title, summary, content_md)",
@@ -151,9 +184,13 @@ async function loadPublishedPosts(
     const { data, error, count } = await query;
     if (error || !data) return { posts: [], page, totalPages: 1 };
 
-    const posts = (data as unknown as PostRow[])
-      .map((row) => mapPostListItem(row, locale))
-      .filter((post): post is PostListItem => post !== null);
+    const posts = await enrichCoverAlts(
+      (data as unknown as PostRow[])
+        .map((row) => mapPostListItem(row, locale))
+        .filter((post): post is PostListItem => post !== null),
+      (data as unknown as PostRow[]).map((row) => row.cover_bucket_path ?? undefined),
+      locale,
+    );
 
     return {
       posts,
@@ -252,7 +289,12 @@ export async function queryPostBySlug(
     const tagIds = (row.blog_post_tags ?? []).map((link) => link.tag_id);
     const relatedPosts = await queryRelatedPosts(locale, row.id, tagIds);
 
-    return { ...item, tags, html, toc, relatedPosts };
+    const [detail] = await enrichCoverAlts(
+      [{ ...item, tags, html, toc, relatedPosts }],
+      [row.cover_bucket_path ?? undefined],
+      locale,
+    );
+    return detail;
   } catch {
     return null;
   }
