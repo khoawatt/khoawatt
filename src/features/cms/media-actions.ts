@@ -3,18 +3,13 @@
 import { revalidatePath } from "next/cache";
 
 import { getServerClient, isAdminUser } from "./session";
-import { findMediaReferences, type MediaBucket } from "./media";
+import type { MediaBucket } from "./media";
 
 export interface MediaUploadResult {
   ok: boolean;
   error?: string;
   path?: string;
   publicUrl?: string;
-}
-
-export interface MediaDeleteResult {
-  ok: boolean;
-  error?: string;
 }
 
 function isAllowedMime(mime: string): boolean {
@@ -65,40 +60,4 @@ export async function uploadMedia(
 
   revalidatePath("/admin/media");
   return { ok: true, path, publicUrl };
-}
-
-export async function deleteMedia(
-  bucket: MediaBucket,
-  path: string,
-): Promise<MediaDeleteResult> {
-  if (!(await isAdminUser())) return { ok: false, error: "Unauthorized." };
-
-  const client = await getServerClient();
-
-  // Block deletion while the file is still referenced by published media rows
-  // (Issue #21 reference/orphan criterion). Fail closed: if the reference query
-  // errors, refuse deletion with an actionable message rather than deleting.
-  let references: number;
-  try {
-    references = await findMediaReferences(client, bucket, path);
-  } catch {
-    return {
-      ok: false,
-      error: "Cannot verify media references right now. Please retry; deletion was refused to avoid orphaning media.",
-    };
-  }
-  if (references > 0) {
-    return {
-      ok: false,
-      error: `Cannot delete: still referenced by ${references} media row(s). Remove the media from its project/resume first.`,
-    };
-  }
-
-  const { error } = await client.storage.from(bucket).remove([path]);
-  if (error) return { ok: false, error: error.message };
-
-  revalidatePath("/");
-  revalidatePath("/vi");
-  revalidatePath("/admin/media");
-  return { ok: true };
 }

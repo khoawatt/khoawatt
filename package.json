@@ -16,7 +16,7 @@
     "seed:admin": "node scripts/seed-admin.mjs",
     "backfill": "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54331} node scripts/backfill-content.mjs",
     "test:db": "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54331} node --test scripts/db-invariants.test.mjs",
-    "test:cms": "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54331} tsx --test src/features/cms/repository.test.ts src/features/blog/repository.test.ts",
+    "test:cms": "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54331} tsx --test src/features/cms/repository.test.ts src/features/cms/delete-service.test.ts src/features/blog/repository.test.ts",
     "test:rls": "supabase db test --local supabase/tests"
   },
   "dependencies": {
