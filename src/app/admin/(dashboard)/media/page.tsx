@@ -42,7 +42,7 @@ export default async function AdminMediaPage({
   const pageNumber =
     Number.isInteger(pageNumberRaw) && pageNumberRaw > 1 ? pageNumberRaw : 1;
 
-  const initial = await fetchMediaPage(active, pageNumber, query || undefined);
+  const initial = await fetchMediaPage(active, pageNumber, query || undefined, 12);
 
   return (
     <AdminPage action={<Link className="admin-link-button" href="/admin">Dashboard</Link>} title="Media">

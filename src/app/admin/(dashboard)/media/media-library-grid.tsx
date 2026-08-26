@@ -48,6 +48,7 @@ export function MediaLibraryGrid({
   const [query, setQuery] = useState(initialQuery);
   const [status, setStatus] = useState<string | null>(null);
   const [editing, setEditing] = useState<MediaAsset | null>(null);
+  const [lightbox, setLightbox] = useState<MediaAsset | null>(null);
   const [, startTransition] = useTransition();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -154,6 +155,15 @@ export function MediaLibraryGrid({
     });
   }
 
+  async function copyUrl(asset: MediaAsset) {
+    try {
+      await navigator.clipboard.writeText(publicMediaUrl(asset.bucket, asset.path));
+      setStatus(`Copied URL for ${asset.path}.`);
+    } catch {
+      setStatus("Could not copy the URL.");
+    }
+  }
+
   return (
     <div className="admin-media-library">
       <form className="admin-media-library__search" onSubmit={submitSearch} role="search">
@@ -182,9 +192,11 @@ export function MediaLibraryGrid({
             <MediaLibraryCard
               asset={asset}
               key={asset.path}
+              onCopy={() => copyUrl(asset)}
               onEdit={() => setEditing(asset)}
               onPick={onPick}
               onRemove={removeAsset}
+              onView={() => setLightbox(asset)}
             />
           ))}
         </ul>
@@ -230,20 +242,38 @@ export function MediaLibraryGrid({
         onClose={() => setEditing(null)}
         onSave={saveDetails}
       />
+
+      <MediaLightbox
+        asset={lightbox}
+        onClose={() => setLightbox(null)}
+        onCopy={() => lightbox && copyUrl(lightbox)}
+        onEdit={() => {
+          if (lightbox) setEditing(lightbox);
+          setLightbox(null);
+        }}
+        onRemove={() => {
+          if (lightbox) removeAsset(lightbox);
+          setLightbox(null);
+        }}
+      />
     </div>
   );
 }
 
 function MediaLibraryCard({
   asset,
+  onCopy,
   onEdit,
   onPick,
   onRemove,
+  onView,
 }: {
   asset: MediaAsset;
+  onCopy: () => void;
   onEdit: () => void;
   onPick?: (asset: MediaAsset) => void;
   onRemove: (asset: MediaAsset) => void;
+  onView: () => void;
 }) {
   const thumb = (
     <>
@@ -251,10 +281,10 @@ function MediaLibraryCard({
       <img
         alt={asset.altEn || asset.title}
         className="admin-media-card__thumb"
-        height={160}
+        height={128}
         loading="lazy"
         src={publicMediaUrl(asset.bucket, asset.path)}
-        width={240}
+        width={192}
       />
       <span className="admin-media-card__title">{asset.title}</span>
     </>
@@ -272,7 +302,14 @@ function MediaLibraryCard({
           {thumb}
         </button>
       ) : (
-        <span className="admin-media-card__view">{thumb}</span>
+        <button
+          className="admin-media-card__pick"
+          onClick={onView}
+          title={`${asset.title} — view`}
+          type="button"
+        >
+          {thumb}
+        </button>
       )}
 
       <p className="admin-media-card__meta">
@@ -284,8 +321,11 @@ function MediaLibraryCard({
       </p>
 
       <div className="admin-media-card__actions">
+        <button className="admin-link-button" onClick={onCopy} type="button">
+          Copy URL
+        </button>
         <button className="admin-link-button" onClick={onEdit} type="button">
-          Edit details
+          Edit
         </button>
         <button
           className="admin-link-button admin-link-button--danger"
@@ -374,6 +414,81 @@ function MediaMetadataDialog({
             <button type="submit">Save</button>
           </div>
         </form>
+      ) : null}
+    </dialog>
+  );
+}
+
+function MediaLightbox({
+  asset,
+  onClose,
+  onCopy,
+  onEdit,
+  onRemove,
+}: {
+  asset: MediaAsset | null;
+  onClose: () => void;
+  onCopy: () => void;
+  onEdit: () => void;
+  onRemove: () => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement | null>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (asset && !dialog.open) dialog.showModal();
+    else if (!asset && dialog.open) dialog.close();
+  }, [asset]);
+
+  return (
+    <dialog
+      aria-label={asset ? `Preview of ${asset.title}` : "Image preview"}
+      className="admin-dialog admin-lightbox"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onClick={(event) => {
+        if (event.target === dialogRef.current) onClose();
+      }}
+      ref={dialogRef}
+    >
+      {asset ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            alt={asset.altEn || asset.title}
+            className="admin-lightbox__image"
+            src={publicMediaUrl(asset.bucket, asset.path)}
+          />
+          <div className="admin-lightbox__meta">
+            <strong>{asset.title}</strong>
+            <code>{asset.path}</code>
+            <span>
+              {asset.width && asset.height ? `${asset.width}×${asset.height} · ` : ""}
+              {asset.mime?.replace("image/", "") ?? "?"}
+            </span>
+          </div>
+          <div className="admin-dialog__actions">
+            <button onClick={onCopy} type="button">
+              Copy URL
+            </button>
+            <button onClick={onEdit} type="button">
+              Edit details
+            </button>
+            <button
+              className="admin-link-button--danger"
+              onClick={onRemove}
+              type="button"
+            >
+              Delete
+            </button>
+            <button onClick={onClose} type="button">
+              Close
+            </button>
+          </div>
+        </>
       ) : null}
     </dialog>
   );
