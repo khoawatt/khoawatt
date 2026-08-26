@@ -69,3 +69,33 @@ test("duplicate headings get distinct slug ids in the toc", async () => {
   assert.equal(toc[0]?.id, "repeat");
   assert.equal(toc[1]?.id, "repeat-1");
 });
+
+test("a leading h1 is stripped (the page template owns the article H1)", async () => {
+  const { html, toc, headingCount } = await renderMarkdown(
+    ["# Post Title", "", "Intro paragraph.", "", "## Section one"].join("\n"),
+  );
+
+  assert.ok(!html.includes("<h1"), "no h1 in rendered body");
+  assert.ok(
+    html.trimStart().startsWith("<p>Intro paragraph.</p>"),
+    "body starts at first paragraph",
+  );
+  assert.deepEqual(toc, [{ id: "section-one", text: "Section one", depth: 2 }]);
+  assert.equal(headingCount, 1);
+});
+
+test("an h1 after other content is kept untouched", async () => {
+  const { html } = await renderMarkdown(
+    ["## Section one", "", "Text.", "", "# Mid-document heading"].join("\n"),
+  );
+
+  assert.ok(html.includes("<h1"), "mid-document h1 survives");
+});
+
+test("content without a leading h1 renders unchanged", async () => {
+  const markdown = ["## Section one", "", "Paragraph."].join("\n");
+  const { html } = await renderMarkdown(markdown);
+
+  assert.ok(!html.includes("<h1"));
+  assert.ok(html.includes("<h2 id=\"section-one\">"));
+});
