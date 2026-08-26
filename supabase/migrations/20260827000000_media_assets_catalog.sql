@@ -33,7 +33,8 @@ create index if not exists media_assets_bucket_recent
   on public.media_assets (bucket, created_at desc, path desc);
 
 -- Integrity guards: buckets must be one of the known storage buckets; dimensions
--- and size must be positive when present (never fabricated from a corrupt file).
+-- must be positive and size non-negative when present (never fabricated from a
+-- corrupt file).
 alter table public.media_assets
   drop constraint if exists media_assets_bucket_check,
   drop constraint if exists media_assets_width_check,
