@@ -116,24 +116,43 @@ function titleFromPath(path) {
     .trim();
 }
 
-async function listObjects(bucket) {
+async function listAllObjects(client, bucket) {
   const all = [];
-  let offset = 0;
-  for (;;) {
-    const { data, error } = await client.storage
-      .from(bucket)
-      .list("", { limit: 100, offset });
-    if (error) throw error;
-    const objects = data ?? [];
-    all.push(...objects.filter((o) => o.id));
-    if (objects.length < 100) break;
-    offset += objects.length;
+  const seen = new Set();
+
+  async function walk(prefix) {
+    let offset = 0;
+    for (;;) {
+      const { data, error } = await client.storage
+        .from(bucket)
+        .list(prefix, { limit: 100, offset });
+      if (error) throw error;
+      const entries = data ?? [];
+      for (const entry of entries) {
+        const fullPath = `${prefix}${entry.name}`;
+        if (entry.id) {
+          if (!seen.has(entry.id)) {
+            seen.add(entry.id);
+            // list() returns names relative to the prefix; reconstruct the
+            // full storage path so catalog rows reference the real object.
+            all.push({ ...entry, name: fullPath });
+          }
+        } else {
+          // Folder entry: recurse into it so nested prefixes are covered.
+          await walk(`${fullPath}/`);
+        }
+      }
+      if (entries.length < 100) break;
+      offset += entries.length;
+    }
   }
+
+  await walk("");
   return all;
 }
 
 async function backfillBucket(bucket) {
-  const objects = await listObjects(bucket);
+  const objects = await listAllObjects(client, bucket);
   let created = 0;
   let skipped = 0;
 
@@ -179,3 +198,6 @@ for (const bucket of BUCKETS) {
   console.log(`${bucket}: created=${result.created} skipped=${result.skipped}`);
 }
 console.log(`TOTAL created=${totals.created} skipped=${totals.skipped}`);
+
+// Export internals for regression tests (nested-prefix enumeration).
+export { listAllObjects, readDimensions };
