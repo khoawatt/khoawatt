@@ -3662,6 +3662,305 @@ video {
 }
 
 /* ============================================================
+   Delete pipeline UI (issue #104): bulk bar, selection, dialog
+   ============================================================ */
+
+/* --- Bulk selection -------------------------------------------------- */
+
+.admin-select-checkbox {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.admin-select-checkbox:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.admin-bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  margin-block-end: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.75rem;
+  background: var(--color-surface-elevated);
+  font-weight: 600;
+}
+
+.admin-bulk-bar__actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.admin-media-item--select-all {
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.admin-media-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* --- Delete confirm dialog ------------------------------------------- */
+
+.delete-dialog-backdrop {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  padding: var(--space-4);
+  place-items: center;
+  background: color-mix(in oklch, var(--color-page) 72%, transparent);
+  backdrop-filter: blur(0.25rem);
+}
+
+.delete-dialog {
+  display: flex;
+  width: min(100%, 34rem);
+  max-height: calc(100dvh - (var(--space-4) * 2));
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-lg);
+}
+
+.delete-dialog__header {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.delete-dialog__title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  line-height: 1.3;
+}
+
+.delete-dialog__close {
+  display: inline-grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.delete-dialog__close:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-subtle);
+}
+
+.delete-dialog__body {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  overflow: auto;
+}
+
+.delete-dialog__intro {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.delete-dialog__loading,
+.delete-dialog__summary {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.delete-dialog__blocked {
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-ui-error) 40%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--color-ui-error) 8%, transparent);
+}
+
+.delete-dialog__blocked-title {
+  margin: 0 0 0.375rem;
+  font-weight: 600;
+}
+
+.delete-dialog__blocked ul,
+.delete-dialog__result ul,
+.delete-dialog__details {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.delete-dialog__blocked li,
+.delete-dialog__details li {
+  padding-block: 0.375rem;
+  border-block-start: 1px solid var(--color-border);
+}
+
+.delete-dialog__details {
+  max-height: 16rem;
+  overflow: auto;
+}
+
+.delete-dialog__details li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: var(--font-size-sm);
+}
+
+.delete-dialog__detail-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.delete-dialog__detail-meta {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.delete-dialog__collapse {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--color-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.delete-dialog__result {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.5rem;
+  background: var(--color-surface-subtle);
+}
+
+.delete-dialog__result p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.delete-dialog__result--partial {
+  border-color: color-mix(in srgb, var(--color-ui-warning) 50%, transparent);
+}
+
+.delete-dialog__result li {
+  padding-block: 0.25rem;
+  font-size: var(--font-size-sm);
+}
+
+.delete-dialog__footer {
+  display: grid;
+  flex: none;
+  gap: 1rem;
+  padding: var(--space-3) var(--space-4);
+  border-block-start: 1px solid var(--color-border);
+}
+
+.delete-dialog__confirm-gate {
+  display: grid;
+  gap: 0.375rem;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.delete-dialog__confirm-gate input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.delete-dialog__confirm-gate input:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.delete-dialog__actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+@media (max-width: 30rem) {
+  .delete-dialog__actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .delete-dialog__actions .admin-button-secondary,
+  .delete-dialog__actions .delete-dialog__confirm {
+    width: 100%;
+  }
+}
+
+.delete-dialog__confirm {
+  min-height: 2.75rem;
+  padding: 0.5rem 1.25rem;
+  border: 1px solid var(--color-error);
+  border-radius: 0.5rem;
+  background: var(--color-error);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.delete-dialog__confirm:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.delete-dialog__confirm:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.delete-dialog__confirm:focus-visible,
+.delete-dialog__close:focus-visible,
+.delete-dialog__collapse:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .delete-dialog__close,
+  .delete-dialog__confirm {
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease,
+      filter 120ms ease;
+  }
+}
+
+/* ============================================================
    Blog (spec §8)
    ============================================================ */
 
