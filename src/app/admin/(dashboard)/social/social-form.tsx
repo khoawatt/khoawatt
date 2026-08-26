@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import type { AdminSocialLink } from "./data";
 import { createSocialLink, updateSocialLink, type SocialActionResult } from "./actions";
+import { SOCIAL_PLATFORMS } from "@/content/contact";
 
 interface SocialLinkFormProps {
   existing?: AdminSocialLink;
@@ -59,8 +60,15 @@ export function SocialLinkForm({ existing }: SocialLinkFormProps) {
         <input name="url" required defaultValue={existing?.url ?? ""} />
       </label>
       <label className="admin-field">
-        <span>Icon key</span>
-        <input name="iconKey" defaultValue={existing?.iconKey ?? ""} />
+        <span>Platform (icon)</span>
+        <select name="iconKey" defaultValue={existing?.iconKey ?? ""}>
+          <option value="">None</option>
+          {SOCIAL_PLATFORMS.map((platform) => (
+            <option key={platform} value={platform}>
+              {platform}
+            </option>
+          ))}
+        </select>
       </label>
       <label className="admin-field">
         <span>Order</span>
