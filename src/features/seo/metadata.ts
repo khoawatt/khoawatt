@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { getPortfolioProfile as getCmsProfile } from "@/features/cms/repository";
+import { getPortfolioProfile } from "@/content/profile";
 import { locales, type Locale } from "@/features/i18n/config";
 import { getLocalizedPathname } from "@/features/i18n/routing";
 
@@ -42,43 +42,42 @@ export function getSeoMetadata({
   openGraph,
   twitter,
   robots,
-}: SeoMetadataInput): Promise<Metadata> {
-  return getCmsProfile(locale).then((profile) => {
-    const canonicalPath = getLocalizedPathname(pathname, locale);
-    const url = getAbsoluteUrl(canonicalPath);
-    const ogImage = getAbsoluteUrl(profile.hero.image.src);
+}: SeoMetadataInput): Metadata {
+  const canonicalPath = getLocalizedPathname(pathname, locale);
+  const url = getAbsoluteUrl(canonicalPath);
+  const profile = getPortfolioProfile(locale);
+  const ogImage = getAbsoluteUrl(profile.hero.image.src);
 
-    return {
-      metadataBase: new URL(getSiteUrl()),
-      title,
-      description,
-      alternates: {
-        canonical: canonicalPath,
-        languages: getAlternateLanguages(pathname),
+  return {
+    metadataBase: new URL(getSiteUrl()),
+    title,
+    description,
+    alternates: {
+      canonical: canonicalPath,
+      languages: getAlternateLanguages(pathname),
+    },
+    robots: robots ?? {
+      index: true,
+      follow: true,
+    },
+    openGraph:
+      openGraph ??
+      {
+        type: "website",
+        locale: ogLocaleBySiteLocale[locale],
+        url,
+        siteName: title,
+        title,
+        description,
+        images: [{ url: ogImage, width: 852, height: 1280, alt: profile.hero.image.alt }],
       },
-      robots: robots ?? {
-        index: true,
-        follow: true,
+    twitter:
+      twitter ??
+      {
+        card: "summary",
+        title,
+        description,
+        images: [ogImage],
       },
-      openGraph:
-        openGraph ??
-        {
-          type: "website",
-          locale: ogLocaleBySiteLocale[locale],
-          url,
-          siteName: title,
-          title,
-          description,
-          images: [{ url: ogImage, width: 852, height: 1280, alt: profile.hero.image.alt }],
-        },
-      twitter:
-        twitter ??
-        {
-          card: "summary",
-          title,
-          description,
-          images: [ogImage],
-        },
-    };
-  });
+  };
 }

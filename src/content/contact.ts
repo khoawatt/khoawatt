@@ -12,25 +12,6 @@ export type SocialPlatform =
   | "thread"
   | "x";
 
-/**
- * Single runtime source of truth for the supported social platforms, derived
- * from the `SocialPlatform` union. Consumers (the CMS repository accessor, the
- * icon glyph registry, and the admin select) all validate against this list so
- * the platform vocabulary is never triplicated or silently drifted.
- */
-export const SOCIAL_PLATFORMS: ReadonlyArray<SocialPlatform> = [
-  "facebook",
-  "github",
-  "instagram",
-  "linkedin",
-  "thread",
-  "x",
-];
-
-export function isSocialPlatform(value: string): value is SocialPlatform {
-  return (SOCIAL_PLATFORMS as ReadonlyArray<string>).includes(value);
-}
-
 export interface SocialLinkView {
   id: SocialPlatform;
   label: string;

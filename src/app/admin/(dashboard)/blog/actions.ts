@@ -3,7 +3,7 @@
 import { revalidatePath, updateTag } from "next/cache";
 
 import { renderMarkdown } from "@/features/blog/markdown";
-import { BLOG_CACHE_TAG } from "@/features/blog/cache-tag";
+import { BLOG_CACHE_TAG } from "@/features/blog/repository";
 import { getServerClient, isAdminUser } from "@/features/cms/session";
 import { required } from "@/features/cms/validation";
 
@@ -156,6 +156,18 @@ export async function updatePost(
   return { ok: true };
 }
 
+export async function deletePost(id: string): Promise<BlogActionResult> {
+  const client = await withBlogClient();
+  if (!client) return { ok: false, error: "Unauthorized." };
+
+  const { error } = await client.rpc("cms_delete_blog_post", { p_id: id });
+  if (error) return { ok: false, error: error.message };
+
+  invalidateBlog();
+  revalidatePath("/admin/blog");
+  return { ok: true };
+}
+
 // --- Categories ---------------------------------------------------------------
 
 export async function createCategory(
@@ -200,6 +212,19 @@ export async function updateCategory(
 
   invalidateBlog();
   revalidatePath("/admin/blog/categories");
+  return { ok: true };
+}
+
+export async function deleteCategory(id: string): Promise<BlogActionResult> {
+  const client = await withBlogClient();
+  if (!client) return { ok: false, error: "Unauthorized." };
+
+  const { error } = await client.rpc("cms_delete_blog_category", { p_id: id });
+  if (error) return { ok: false, error: error.message };
+
+  invalidateBlog();
+  revalidatePath("/admin/blog/categories");
+  revalidatePath("/admin/blog");
   return { ok: true };
 }
 

@@ -7,10 +7,7 @@ export const metadata = {
 };
 
 export default async function AdminNewPostPage() {
-  const [categories, tags] = await Promise.all([
-    listCategories(),
-    listTags(),
-  ]);
+  const [categories, tags] = await Promise.all([listCategories(), listTags()]);
 
   return (
     <AdminPage backHref="/admin/blog" title="New post">

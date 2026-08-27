@@ -20,15 +20,13 @@
  * resolves to `null` / an empty listing so routes can map to `notFound()` /
  * empty state rather than a 500.
  */
-import "server-only";
-
 import type { Locale } from "@/features/i18n/config";
 import { unstable_cache } from "next/cache";
 
 import { hasCmsConfig } from "@/features/cms/config";
 import { getMediaPublicUrl } from "@/features/cms/media";
+import { getCoverAltTexts } from "@/features/cms/media-catalog";
 import { getServiceClient } from "@/features/cms/server";
-import { BLOG_CACHE_TAG } from "./cache-tag";
 import { renderMarkdown } from "./markdown";
 import { readingTimeMinutes } from "./reading-time";
 import type {
@@ -39,38 +37,13 @@ import type {
   PostListItem,
 } from "./types";
 
+export const BLOG_CACHE_TAG = "blog";
+
 const PAGE_SIZE = 6;
 const RELATED_POSTS_LIMIT = 3;
 const COVER_FRAME = { width: 800, height: 450 };
 /** Safety net only: refresh cached reads at most this often if `updateTag` is missed. */
 const BLOG_SAFETY_NET_SECONDS = 60 * 60 * 24;
-
-/**
- * Cover alt text from the media_assets catalog (issue #102), keyed by locale.
- * Falls back to null when the catalog has no row (a legacy/migrated cover).
- * Cached under the blog tag so a catalog edit invalidates alongside posts.
- */
-const getCoverAlt = unstable_cache(
-  async (path: string, locale: Locale): Promise<string | null> => {
-    const client = getServiceClient();
-    if (!hasCmsConfig() || !client) return null;
-    try {
-      const { data, error } = await client
-        .from("media_assets")
-        .select("alt_en, alt_vi, title")
-        .eq("bucket", "blog-media")
-        .eq("path", path)
-        .maybeSingle();
-      if (error || !data) return null;
-      const alt = locale === "vi" ? data.alt_vi : data.alt_en;
-      return (alt ?? "").trim() || data.title || null;
-    } catch {
-      return null;
-    }
-  },
-  ["blog-cover-alt"],
-  { tags: [BLOG_CACHE_TAG] },
-);
 
 interface CategoryNameRow {
   locale: string;
@@ -120,7 +93,7 @@ function localeRow<T extends { locale: string }>(
 }
 
 /** Map a row → listing item for the requested locale, or null when not renderable. */
-async function mapPostListItem(row: PostRow, locale: Locale): Promise<PostListItem | null> {
+function mapPostListItem(row: PostRow, locale: Locale): PostListItem | null {
   const translation = localeRow(row.blog_post_translations, locale);
   const category = row.blog_categories;
   const categoryName = localeRow(category?.blog_category_translations, locale);
@@ -129,7 +102,7 @@ async function mapPostListItem(row: PostRow, locale: Locale): Promise<PostListIt
   const coverImage = row.cover_bucket_path
     ? {
         src: getMediaPublicUrl("blog-media", row.cover_bucket_path),
-        alt: (await getCoverAlt(row.cover_bucket_path, locale)) ?? translation.title,
+        alt: translation.title,
         width: COVER_FRAME.width,
         height: COVER_FRAME.height,
       }
@@ -147,8 +120,40 @@ async function mapPostListItem(row: PostRow, locale: Locale): Promise<PostListIt
   };
 }
 
-function postSelect() {
-  return [
+/**
+ * Override cover alt text from the media_assets catalog (#102) when the owner
+ * has written one for the requested locale; the post title stays the fallback.
+ */
+async function enrichCoverAlts<T extends { coverImage?: { alt: string } }>(
+  items: T[],
+  coverPaths: (string | undefined)[],
+  locale: Locale,
+): Promise<T[]> {
+  const paths = [...new Set(coverPaths.filter((p): p is string => Boolean(p)))];
+  if (paths.length === 0) return items;
+
+  const client = getServiceClient();
+  if (!client) return items;
+
+  try {
+    const alts = await getCoverAltTexts(client, "blog-media", paths);
+    if (alts.size === 0) return items;
+
+    let index = 0;
+    return items.map((item) => {
+      const path = coverPaths[index++];
+      const lookup = path ? alts.get(path) : undefined;
+      if (!lookup || !item.coverImage) return item;
+      const catalogAlt = locale === "vi" ? lookup.altVi : lookup.altEn;
+      if (!catalogAlt.trim()) return item;
+      return { ...item, coverImage: { ...item.coverImage, alt: catalogAlt } };
+    });
+  } catch {
+    return items;
+  }
+}
+
+function postSelect() {  return [
     "id, slug, cover_bucket_path, status, published_at, updated_at",
     "blog_categories(id, slug, blog_category_translations(locale, name))",
     "blog_post_translations(locale, title, summary, content_md)",
@@ -179,10 +184,13 @@ async function loadPublishedPosts(
     const { data, error, count } = await query;
     if (error || !data) return { posts: [], page, totalPages: 1 };
 
-    const rows = data as unknown as PostRow[];
-    const posts = (
-      await Promise.all(rows.map((row) => mapPostListItem(row, locale)))
-    ).filter((post): post is PostListItem => post !== null);
+    const posts = await enrichCoverAlts(
+      (data as unknown as PostRow[])
+        .map((row) => mapPostListItem(row, locale))
+        .filter((post): post is PostListItem => post !== null),
+      (data as unknown as PostRow[]).map((row) => row.cover_bucket_path ?? undefined),
+      locale,
+    );
 
     return {
       posts,
@@ -212,19 +220,16 @@ async function queryRelatedPosts(
       .limit(50);
     if (error || !data) return [];
 
-    const rows = data as unknown as PostRow[];
-    const scored = (
-      await Promise.all(
-        rows.map(async (row) => {
-          const item = await mapPostListItem(row, locale);
-          if (!item) return null;
-          const shared = (row.blog_post_tags ?? []).filter((link) =>
-            tagIds.includes(link.tag_id),
-          ).length;
-          return { item, shared };
-        }),
-      )
-    ).filter((entry): entry is { item: PostListItem; shared: number } => entry !== null)
+    const scored = (data as unknown as PostRow[])
+      .map((row) => {
+        const item = mapPostListItem(row, locale);
+        if (!item) return null;
+        const shared = (row.blog_post_tags ?? []).filter((link) =>
+          tagIds.includes(link.tag_id),
+        ).length;
+        return { item, shared };
+      })
+      .filter((entry): entry is { item: PostListItem; shared: number } => entry !== null)
       .sort(
         (a, b) =>
           b.shared - a.shared ||
@@ -267,7 +272,7 @@ export async function queryPostBySlug(
     if (error || !data) return null;
 
     const row = data as unknown as PostRow;
-    const item = await mapPostListItem(row, locale);
+    const item = mapPostListItem(row, locale);
     const translation = localeRow(row.blog_post_translations, locale);
     if (!item || !translation) return null;
 
@@ -284,7 +289,12 @@ export async function queryPostBySlug(
     const tagIds = (row.blog_post_tags ?? []).map((link) => link.tag_id);
     const relatedPosts = await queryRelatedPosts(locale, row.id, tagIds);
 
-    return { ...item, tags, html, toc, relatedPosts };
+    const [detail] = await enrichCoverAlts(
+      [{ ...item, tags, html, toc, relatedPosts }],
+      [row.cover_bucket_path ?? undefined],
+      locale,
+    );
+    return detail;
   } catch {
     return null;
   }
@@ -424,22 +434,19 @@ export async function queryRssPosts(
       .limit(limit);
     if (error || !data) return [];
 
-    const rows = data as unknown as PostRow[];
-    return (
-      await Promise.all(
-        rows.map(async (row) => {
-          const item = await mapPostListItem(row, locale);
-          return item
-            ? {
-                title: item.title,
-                slug: item.slug,
-                summary: item.summary,
-                publishedAt: item.publishedAt,
-              }
-            : null;
-        }),
-      )
-    ).filter((row): row is RssPostRow => row !== null);
+    return (data as unknown as PostRow[])
+      .map((row) => {
+        const item = mapPostListItem(row, locale);
+        return item
+          ? {
+              title: item.title,
+              slug: item.slug,
+              summary: item.summary,
+              publishedAt: item.publishedAt,
+            }
+          : null;
+      })
+      .filter((row): row is RssPostRow => row !== null);
   } catch {
     return [];
   }

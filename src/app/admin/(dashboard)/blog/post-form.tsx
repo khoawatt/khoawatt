@@ -13,7 +13,9 @@ import {
   type BlogPostFormData,
 } from "./actions";
 import type { AdminCategoryRow, AdminPostRow, AdminTagRow } from "./data";
-import { MediaPickerModal } from "@/features/cms/media-picker-modal";
+import { MediaInsertButton } from "./media-insert";
+import { MediaPickerModal } from "../media/media-picker-modal";
+import { publicMediaUrl } from "@/features/cms/media-url";
 
 interface PostFormProps {
   categories: AdminCategoryRow[];
@@ -43,6 +45,8 @@ export function PostForm({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
 
+  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+
   const [localeTab, setLocaleTab] = useState<LocaleTab>("en");
   const [slug, setSlug] = useState(existing?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(Boolean(existing));
@@ -65,13 +69,24 @@ export function PostForm({
   const enContentRef = useRef<HTMLTextAreaElement>(null);
   const viContentRef = useRef<HTMLTextAreaElement>(null);
 
-  function insertMarkdownImage(tab: LocaleTab, url: string, alt: string) {
+  function insertMarkdownImage(
+    tab: LocaleTab,
+    image: { url: string; altEn: string; altVi: string },
+  ) {
     const textarea = tab === "en" ? enContentRef.current : viContentRef.current;
     const value = tab === "en" ? contentMdEn : contentMdVi;
     const setter = tab === "en" ? setContentMdEn : setContentMdVi;
 
+    // Catalog alt text wins; fall back to a readable name from the URL.
+    const fallback = decodeURIComponent(image.url.split("/").pop() ?? "")
+      .replace(/\.[^.]+$/, "")
+      .replace(/^\d+-/, "")
+      .replace(/[-_]+/g, " ");
+    const alt =
+      (tab === "en" ? image.altEn : image.altVi).trim() || fallback;
+
     const position = textarea?.selectionStart ?? value.length;
-    const markdown = `![${alt}](${url})`;
+    const markdown = `![${alt}](${image.url})`;
     setter(`${value.slice(0, position)}${markdown}${value.slice(position)}`);
 
     window.requestAnimationFrame(() => {
@@ -82,32 +97,8 @@ export function PostForm({
     });
   }
 
-  function openPicker(surface: "cover" | LocaleTab) {
-    setPickerSurface(surface);
-    setPickerOpen(true);
-  }
-
-  function handlePickCover(selection: { path: string; url: string; title: string; alt: string }) {
-    setCoverBucketPath(selection.path);
-  }
-
-  function handlePickInsert(selection: { path: string; url: string; title: string; alt: string }) {
-    if (pickerSurface === "en" || pickerSurface === "vi") {
-      insertMarkdownImage(pickerSurface, selection.url, selection.alt || selection.title);
-    }
-  }
-
-  function handlePickerSelect(selection: { path: string; url: string; title: string; alt: string }) {
-    if (pickerSurface === "cover") handlePickCover(selection);
-    else handlePickInsert(selection);
-  }
-
   const [newTagName, setNewTagName] = useState("");
   const [newTagError, setNewTagError] = useState<string | null>(null);
-
-  // Shared media picker state: which surface opened it ("cover" | "en" | "vi").
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerSurface, setPickerSurface] = useState<"cover" | LocaleTab | null>(null);
 
   const [previewTab, setPreviewTab] = useState<LocaleTab | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
@@ -297,21 +288,49 @@ export function PostForm({
 
           <fieldset className="admin-field">
             <legend>Cover (blog-media)</legend>
-            <div className="admin-form-row">
-              <input
-                aria-label="Cover image path"
-                onChange={(event) => setCoverBucketPath(event.target.value)}
-                placeholder="No cover"
-                value={coverBucketPath}
+            {coverBucketPath ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                alt="Selected cover preview"
+                className="admin-cover-preview"
+                height={90}
+                src={publicMediaUrl("blog-media", coverBucketPath)}
+                width={160}
               />
-              <button onClick={() => openPicker("cover")} type="button">
-                Pick from library
+            ) : (
+              <p className="admin-note">No cover selected.</p>
+            )}
+            <div className="admin-form-row">
+              <button
+                className="admin-link-button"
+                onClick={() => setCoverPickerOpen(true)}
+                type="button"
+              >
+                {coverBucketPath ? "Change cover…" : "Choose cover…"}
               </button>
+              {coverBucketPath ? (
+                <button
+                  className="admin-link-button admin-link-button--danger"
+                  onClick={() => setCoverBucketPath("")}
+                  type="button"
+                >
+                  Remove
+                </button>
+              ) : null}
             </div>
             {coverBucketPath ? (
-              <p className="admin-note">Selected: {coverBucketPath}</p>
+              <small className="admin-hint">{coverBucketPath}</small>
             ) : null}
           </fieldset>
+          <MediaPickerModal
+            bucket="blog-media"
+            onClose={() => setCoverPickerOpen(false)}
+            onSelect={(asset) => {
+              setCoverBucketPath(asset.path);
+              setCoverPickerOpen(false);
+            }}
+            open={coverPickerOpen}
+          />
         </div>
 
         {/* Right column: locale editor + live preview */}
@@ -360,13 +379,9 @@ export function PostForm({
                 <label className="admin-field">
                   <span>Markdown content (EN)</span>
                   <div className="admin-form-row">
-                    <button
-                      className="admin-link-button"
-                      onClick={() => openPicker("en")}
-                      type="button"
-                    >
-                      Insert image
-                    </button>
+                    <MediaInsertButton
+                      onInsert={(image) => insertMarkdownImage("en", image)}
+                    />
                     <button
                       className="admin-link-button"
                       disabled={isPreviewing}
@@ -413,13 +428,9 @@ export function PostForm({
                 <label className="admin-field">
                   <span>Markdown content (VI)</span>
                   <div className="admin-form-row">
-                    <button
-                      className="admin-link-button"
-                      onClick={() => openPicker("vi")}
-                      type="button"
-                    >
-                      Insert image
-                    </button>
+                    <MediaInsertButton
+                      onInsert={(image) => insertMarkdownImage("vi", image)}
+                    />
                     <button
                       className="admin-link-button"
                       disabled={isPreviewing}
@@ -472,14 +483,6 @@ export function PostForm({
         </button>
         <Link href="/admin/blog">Cancel</Link>
       </div>
-
-      <MediaPickerModal
-        bucket="blog-media"
-        defaultAlt={pickerSurface === "cover" ? titleEn || titleVi || "" : ""}
-        onClose={() => setPickerOpen(false)}
-        onSelect={handlePickerSelect}
-        open={pickerOpen}
-      />
     </form>
   );
 }

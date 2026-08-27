@@ -11,13 +11,12 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "tsx --test src/content/*.test.ts src/features/contact/*.test.ts src/features/newsletter/*.test.ts src/features/seo/*.test.ts src/features/blog/reading-time.test.ts src/features/blog/markdown.test.ts src/features/blog/rss.test.ts src/features/cms/image-dimensions.test.ts \"src/components/sections/contact/social-platform.test.ts\" \"src/app/admin/(dashboard)/skills/skill-buckets.test.ts\" src/app/api/resume-media/route.test.ts",
+    "test": "tsx --test src/content/*.test.ts src/features/contact/*.test.ts src/features/newsletter/*.test.ts src/features/seo/*.test.ts src/features/blog/reading-time.test.ts src/features/blog/markdown.test.ts src/features/blog/rss.test.ts src/features/cms/image-dimensions.test.ts \"src/app/admin/(dashboard)/skills/skill-buckets.test.ts\" src/app/api/resume-media/route.test.ts",
     "preflight": "tsx scripts/preflight-cutover.ts",
     "seed:admin": "node scripts/seed-admin.mjs",
     "backfill": "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54331} node scripts/backfill-content.mjs",
-    "backfill:media": "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54331} SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-} node scripts/backfill-media-assets.mjs",
-    "test:db": "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54331} node --test scripts/db-invariants.test.mjs scripts/backfill-media-assets.test.mjs",
-    "test:cms": "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54331} NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-} SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-} tsx --test src/features/cms/repository.test.ts src/features/cms/delete-service.test.ts src/features/cms/media-library.test.ts src/features/cms/social-links.test.ts src/features/blog/repository.test.ts",
+    "test:db": "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54331} node --test scripts/db-invariants.test.mjs",
+    "test:cms": "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54331} tsx --test src/features/cms/repository.test.ts src/features/cms/media-catalog.test.ts src/features/blog/repository.test.ts",
     "test:rls": "supabase db test --local supabase/tests"
   },
   "dependencies": {

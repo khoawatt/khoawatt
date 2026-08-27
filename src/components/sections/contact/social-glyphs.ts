@@ -1,7 +1,4 @@
-import {
-  SOCIAL_PLATFORMS,
-  type SocialPlatform,
-} from "@/content/contact";
+import type { SocialPlatform } from "@/content/contact";
 
 interface StrokeShape {
   readonly tag: "path" | "rect" | "circle" | "line";
@@ -128,16 +125,3 @@ export const detailGlyphs: Readonly<Record<string, SocialGlyph>> = {
     ],
   },
 };
-
-/**
- * Assert every platform in the runtime list has a glyph. Kept as a separate
- * export so a unit test proves the vocabulary registry and the icon registry
- * can never drift (the glyph record is type-checked, this is the runtime guard).
- */
-export function assertSocialGlyphCoverage(): void {
-  for (const platform of SOCIAL_PLATFORMS) {
-    if (!socialGlyphs[platform]) {
-      throw new Error(`Missing glyph for social platform: ${platform}`);
-    }
-  }
-}

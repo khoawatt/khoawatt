@@ -23,16 +23,17 @@ export default async function AdminEditPostPage({
     notFound();
   }
 
-  const [categories, tags] = await Promise.all([
-    listCategories(),
-    listTags(),
-  ]);
+  const [categories, tags] = await Promise.all([listCategories(), listTags()]);
 
   return (
     <AdminPage backHref="/admin/blog" title="Edit post">
       <AdminFormCard className="admin-form-card--wide">
         <h2>Post details</h2>
-        <PostForm categories={categories} existing={post} tags={tags} />
+        <PostForm
+          categories={categories}
+          existing={post}
+          tags={tags}
+        />
       </AdminFormCard>
     </AdminPage>
   );

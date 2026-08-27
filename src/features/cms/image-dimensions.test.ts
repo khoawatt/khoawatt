@@ -1,117 +1,158 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { readImageDimensions } from "./image-dimensions";
+import { imageDimensions } from "./image-dimensions";
 
-function bytes(...values: number[]): ArrayBuffer {
-  return Uint8Array.from(values).buffer;
+function pngBytes(width: number, height: number): Uint8Array {
+  const bytes = new Uint8Array(33);
+  bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], 0);
+  // IHDR length + type
+  bytes.set([0, 0, 0, 13], 8);
+  bytes.set([0x49, 0x48, 0x44, 0x52], 12);
+  bytes.set(
+    [
+      (width >>> 24) & 0xff,
+      (width >>> 16) & 0xff,
+      (width >>> 8) & 0xff,
+      width & 0xff,
+    ],
+    16,
+  );
+  bytes.set(
+    [
+      (height >>> 24) & 0xff,
+      (height >>> 16) & 0xff,
+      (height >>> 8) & 0xff,
+      height & 0xff,
+    ],
+    20,
+  );
+  return bytes;
 }
 
-test("PNG: signature + IHDR dimensions (4-byte big-endian)", () => {
-  // 0x89 PNG\r\n\x1a\n + IHDR length + "IHDR" + width=1200 (0x000004B0) + height=800 (0x00000320)
-  const buffer = bytes(
-    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-    0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
-    0x00, 0x00, 0x04, 0xb0, 0x00, 0x00, 0x03, 0x20,
+function jpegBytes(width: number, height: number): Uint8Array {
+  // SOI + SOF0 with one component.
+  const bytes = new Uint8Array(19);
+  bytes.set([0xff, 0xd8], 0);
+  bytes.set([0xff, 0xc0], 2);
+  bytes.set([(15 >> 8) & 0xff, 15 & 0xff], 4); // segment length
+  bytes.set([0x08], 6); // precision
+  bytes.set([(height >> 8) & 0xff, height & 0xff], 7);
+  bytes.set([(width >> 8) & 0xff, width & 0xff], 9);
+  bytes.set([0x01, 0x00, 0x00, 0x00, 0x00], 11);
+  return bytes;
+}
+
+function webpVp8xBytes(width: number, height: number): Uint8Array {
+  const bytes = new Uint8Array(30);
+  const text = (offset: number, value: string) => {
+    for (let i = 0; i < value.length; i += 1) {
+      bytes[offset + i] = value.charCodeAt(i);
+    }
+  };
+  text(0, "RIFF");
+  bytes.set([40, 0, 0, 0], 4);
+  text(8, "WEBP");
+  text(12, "VP8X");
+  bytes.set([24, 0, 0, 0], 16); // chunk size
+  bytes.set([0, 0, 0, 0], 20); // flags
+  bytes.set([(width - 1) & 0xff, ((width - 1) >> 8) & 0xff, ((width - 1) >> 16) & 0xff], 24);
+  bytes.set([(height - 1) & 0xff, ((height - 1) >> 8) & 0xff, ((height - 1) >> 16) & 0xff], 27);
+  return bytes;
+}
+
+function webpVp8lBytes(width: number, height: number): Uint8Array {
+  const bytes = new Uint8Array(25);
+  const text = (offset: number, value: string) => {
+    for (let i = 0; i < value.length; i += 1) {
+      bytes[offset + i] = value.charCodeAt(i);
+    }
+  };
+  text(0, "RIFF");
+  bytes.set([17, 0, 0, 0], 4);
+  text(8, "WEBP");
+  text(12, "VP8L");
+  bytes.set([5, 0, 0, 0], 16);
+  bytes.set([0x2f], 20);
+  const bits =
+    ((width - 1) & 0x3fff) | (((height - 1) & 0x3fff) << 14); // fits in 28 bits
+  bytes.set(
+    [
+      bits & 0xff,
+      (bits >>> 8) & 0xff,
+      (bits >>> 16) & 0xff,
+      (bits >>> 24) & 0xff,
+    ],
+    21,
   );
-  assert.deepEqual(readImageDimensions(buffer), { width: 1200, height: 800 });
+  return bytes;
+}
+
+function webpLossyBytes(width: number, height: number): Uint8Array {
+  const bytes = new Uint8Array(30);
+  const text = (offset: number, value: string) => {
+    for (let i = 0; i < value.length; i += 1) {
+      bytes[offset + i] = value.charCodeAt(i);
+    }
+  };
+  text(0, "RIFF");
+  bytes.set([22, 0, 0, 0], 4);
+  text(8, "WEBP");
+  text(12, "VP8 ");
+  bytes.set([10, 0, 0, 0], 16);
+  bytes.set([0x30, 0x01, 0x00], 20); // frame tag
+  bytes.set([0x9d, 0x01, 0x2a], 23); // start code
+  bytes.set([width & 0xff, (width >> 8) & 0xff], 26);
+  bytes.set([height & 0xff, (height >> 8) & 0xff], 28);
+  return bytes;
+}
+
+test("png dimensions come from the IHDR block", () => {
+  assert.deepEqual(imageDimensions(pngBytes(852, 1280), "image/png"), {
+    height: 1280,
+    width: 852,
+  });
 });
 
-test("PNG: oversized dimensions still parse (4-byte width)", () => {
-  const buffer = bytes(
-    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-    0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
-    0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
-  );
-  assert.deepEqual(readImageDimensions(buffer), { width: 65536, height: 256 });
+test("jpeg dimensions come from the SOF marker", () => {
+  assert.deepEqual(imageDimensions(jpegBytes(800, 450), "image/jpeg"), {
+    height: 450,
+    width: 800,
+  });
 });
 
-test("PNG: bad signature returns null", () => {
-  const buffer = bytes(0x89, 0x50, 0x4e, 0x47, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
-  assert.equal(readImageDimensions(buffer), null);
+test("webp extended (VP8X) dimensions are stored minus one", () => {
+  assert.deepEqual(imageDimensions(webpVp8xBytes(1024, 768), "image/webp"), {
+    height: 768,
+    width: 1024,
+  });
 });
 
-test("PNG: too short returns null", () => {
-  assert.equal(readImageDimensions(bytes(0x89, 0x50, 0x4e, 0x47)), null);
+test("webp lossless (VP8L) packs dimensions into 14 bits each", () => {
+  assert.deepEqual(imageDimensions(webpVp8lBytes(640, 480), "image/webp"), {
+    height: 480,
+    width: 640,
+  });
 });
 
-test("JPEG: SOF0 gives height then width", () => {
-  // SOI FF D8, APP0 marker FF E0 len 0x0010 (14 data bytes), then
-  // SOF0 FF C0 len 0x0011: precision 08, height 0x02D0=720, width 0x0500=1280.
-  const app0 = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
-  const soF0 = [0x08, 0x02, 0xd0, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
-  const buffer = Uint8Array.from([
-    0xff, 0xd8,
-    0xff, 0xe0, 0x00, 0x10, ...app0,
-    0xff, 0xc0, 0x00, 0x11, ...soF0,
-  ]).buffer;
-  assert.deepEqual(readImageDimensions(buffer), { width: 1280, height: 720 });
+test("webp lossy (VP8) reads the frame header", () => {
+  assert.deepEqual(imageDimensions(webpLossyBytes(320, 240), "image/webp"), {
+    height: 240,
+    width: 320,
+  });
 });
 
-test("JPEG: skips non-SOF segments to reach SOF2 (progressive)", () => {
-  // SOI, DHT (FF C4) len 0x0004 (2 data bytes), then SOF2 (FF C2):
-  // height 0x00C8=200, width 0x012C=300.
-  const buffer = Uint8Array.from([
-    0xff, 0xd8,
-    0xff, 0xc4, 0x00, 0x04, 0x00, 0x00,
-    0xff, 0xc2, 0x00, 0x11, 0x08, 0x00, 0xc8, 0x01, 0x2c,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-  ]).buffer;
-  assert.deepEqual(readImageDimensions(buffer), { width: 300, height: 200 });
+test("truncated buffers resolve to unknown dimensions", () => {
+  assert.equal(imageDimensions(new Uint8Array(10), "image/png"), null);
+  assert.equal(imageDimensions(new Uint8Array(4), "image/jpeg"), null);
+  assert.equal(imageDimensions(new Uint8Array(12), "image/webp"), null);
 });
 
-test("JPEG: not SOI returns null", () => {
-  const buffer = bytes(0x00, 0xd8, 0xff, 0xd8);
-  assert.equal(readImageDimensions(buffer), null);
-});
+test("unknown mimes and corrupt payloads resolve to unknown dimensions", () => {
+  assert.equal(imageDimensions(pngBytes(10, 10), "image/gif"), null);
+  assert.equal(imageDimensions(webpLossyBytes(0, 0), "image/webp"), null);
 
-test("WebP: VP8X canvas size", () => {
-  // RIFF + WEBP + VP8X: width-1 = 0x0004B0 => 1201, height-1 = 0x000320 => 801
-  const buffer = bytes(
-    0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00,
-    0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x58,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0xb0, 0x04, 0x00, 0x20, 0x03, 0x00,
-  );
-  assert.deepEqual(readImageDimensions(buffer), { width: 1201, height: 801 });
-});
-
-test("WebP: VP8L lossless packed dimensions", () => {
-  // RIFF WEBP VP8L: chunk header (tag + 4B size), sig 0x2f, then
-  // width-1=0x1F (31) | (height-1=0x0F (15) << 14)
-  const bits = 31 | (15 << 14); // 0xF01F
-  const buffer = bytes(
-    0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00,
-    0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x4c,
-    0x00, 0x00, 0x00, 0x00, 0x2f,
-    bits & 0xff, (bits >> 8) & 0xff, (bits >> 16) & 0xff, (bits >> 24) & 0xff,
-  );
-  assert.deepEqual(readImageDimensions(buffer), { width: 32, height: 16 });
-});
-
-test("WebP: VP8 lossy frame header", () => {
-  // RIFF + WEBP + chunk header "VP8 " (tag + 4B size), then frame tag
-  // 0x9d 0x01 0x2a, width(LE)=0x0050=80, height(LE)=0x0032=50
-  const buffer = bytes(
-    0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00,
-    0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x20,
-    0x00, 0x00, 0x00, 0x00, 0x9d, 0x01, 0x2a, 0x50, 0x00, 0x32, 0x00,
-  );
-  assert.deepEqual(readImageDimensions(buffer), { width: 80, height: 50 });
-});
-
-test("WebP: not a webp returns null", () => {
-  const buffer = bytes(
-    0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x56, 0x50, 0x38, 0x20,
-  );
-  assert.equal(readImageDimensions(buffer), null);
-});
-
-test("unknown type returns null", () => {
-  assert.equal(readImageDimensions(bytes(0x42, 0x4d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)), null);
-});
-
-test("empty buffer returns null", () => {
-  assert.equal(readImageDimensions(new ArrayBuffer(0)), null);
+  const garbage = new Uint8Array(64).fill(0x41);
+  assert.equal(imageDimensions(garbage, "image/png"), null);
+  assert.equal(imageDimensions(garbage, "image/jpeg"), null);
 });

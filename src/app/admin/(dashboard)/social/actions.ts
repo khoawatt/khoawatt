@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 
 import { getServerClient, isAdminUser } from "@/features/cms/session";
 import { isHttpUrl, required } from "@/features/cms/validation";
-import { isSocialPlatform } from "@/content/contact";
 
 export interface SocialLinkFormData {
   id?: string;
@@ -25,9 +24,6 @@ function validate(data: SocialLinkFormData): SocialActionResult | null {
   if (!required(data.label)) errors.label = "Label is required.";
   if (!required(data.url)) errors.url = "URL is required.";
   else if (!isHttpUrl(data.url)) errors.url = "URL must be http(s).";
-  if (data.iconKey && !isSocialPlatform(data.iconKey)) {
-    errors.iconKey = "Unknown platform — choose from the list.";
-  }
   if (Object.keys(errors).length > 0) return { ok: false, fieldErrors: errors };
   return null;
 }

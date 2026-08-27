@@ -29,7 +29,7 @@ export function getBlogListingMetadata(
   messages: BlogMessages,
   metadataTitle: string,
   pathname = "/blog",
-): Promise<Metadata> {
+): Metadata {
   return getSeoMetadata({
     locale,
     title: `${messages.eyebrow} — ${metadataTitle}`,
@@ -52,7 +52,7 @@ export function getBlogCategoryMetadata(
   messages: BlogMessages,
   metadataTitle: string,
   page = 1,
-): Promise<Metadata> {
+): Metadata {
   const description = `${messages.intro} ${category.name}.`;
   const pageSuffix = page > 1 ? `/page/${page}` : "";
   return getSeoMetadata({
@@ -68,7 +68,7 @@ export function getBlogPostMetadata(
   post: PostDetail,
   messages: BlogMessages,
   metadataTitle: string,
-): Promise<Metadata> {
+): Metadata {
   const pathname = `/blog/${post.slug}`;
   const datePublished = new Date(post.publishedAt).toISOString();
   const dateModified = post.updatedAt

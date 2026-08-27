@@ -13,9 +13,7 @@ import {
 } from "@/content/skills";
 import {
   getContactContent as getLocalContact,
-  isSocialPlatform,
   type ContactContentView,
-  type SocialLinkView,
 } from "@/content/contact";
 import {
   getFeaturedProjects as getLocalFeaturedProjects,
@@ -188,26 +186,14 @@ export async function getSkillsContent(
   }
 }
 
-/**
- * Canonical social-links accessor (issue #83).
- *
- * Contract (replace-if-nonempty): the CMS is authoritative when it yields at
- * least one VALID row — a row with an https URL and an `icon_key` that matches
- * the runtime platform list derived from the `SocialPlatform` union. Unknown
- * icon keys are dropped (they can no longer be entered via the admin select,
- * but legacy rows are still filtered defensively). When the CMS is empty,
- * misconfigured, or unavailable, the accessor falls back to the static social
- * defaults so the contact section and SEO `sameAs` always have something.
- *
- * The URL guard (https only) intentionally rejects `#` placeholders and
- * javascript: links so a malformed row can never leak into SEO structured data.
- */
-export async function getSocialLinks(
+export async function getContactContent(
   locale: Locale,
-): Promise<ReadonlyArray<SocialLinkView>> {
-  const base = getLocalContact(locale).socials;
+): Promise<ContactContentView> {
+  const base = getLocalContact(locale);
 
-  if (!hasCmsConfig()) return base;
+  if (!hasCmsConfig()) {
+    return base;
+  }
 
   const client = getServiceClient();
   if (!client) return base;
@@ -222,36 +208,37 @@ export async function getSocialLinks(
     if (error || !data) return base;
 
     const rows = data as SocialRow[];
+    const platformSet = new Set<string>([
+      "facebook",
+      "github",
+      "instagram",
+      "linkedin",
+      "thread",
+      "x",
+    ]);
+
     const cmsSocials = rows
       .filter(
         (row) =>
           row.url.startsWith("https://") &&
           row.icon_key !== null &&
-          isSocialPlatform(row.icon_key),
+          platformSet.has(row.icon_key),
       )
       .map((row) => ({
-        id: row.icon_key as SocialLinkView["id"],
+        id: row.icon_key as ContactContentView["socials"][number]["id"],
         label: row.label,
         href: row.url,
       }));
 
-    return cmsSocials.length > 0 ? cmsSocials : base;
+    return {
+      ...base,
+      // Contact details stay owner-managed static content; only configured
+      // socials are CMS-driven. An empty table falls back to static defaults.
+      socials: cmsSocials.length > 0 ? cmsSocials : base.socials,
+    };
   } catch {
     return base;
   }
-}
-
-export async function getContactContent(
-  locale: Locale,
-): Promise<ContactContentView> {
-  const base = getLocalContact(locale);
-
-  return {
-    ...base,
-    // Contact details stay owner-managed static content; only configured
-    // socials are CMS-driven (see getSocialLinks for the fallback contract).
-    socials: await getSocialLinks(locale),
-  };
 }
 
 interface ProjectMediaRow {

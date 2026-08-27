@@ -3,39 +3,33 @@
 import { revalidatePath } from "next/cache";
 
 import { getServerClient, isAdminUser } from "./session";
-import { listMediaAssets } from "./media-library-server";
-import { getMediaUrl, type MediaAsset } from "./media-library";
-import { readImageDimensions } from "./image-dimensions";
-import type { MediaBucket } from "./media";
+import { findMediaReferences, type MediaBucket } from "./media";
+import { imageDimensions } from "./image-dimensions";
+import {
+  deleteMediaAsset,
+  updateMediaAssetMeta,
+  upsertMediaAsset,
+} from "./media-catalog";
 
 export interface MediaUploadResult {
   ok: boolean;
   error?: string;
   path?: string;
   publicUrl?: string;
+  /** Upload succeeded but the metadata row write failed; edit later. */
+  warning?: string;
 }
 
-export interface MediaUploadInput {
-  bucket: MediaBucket;
-  file: File;
-  /** Optional human title; defaults to a cleaned filename. */
-  title?: string;
-  /** Optional locale alt text captured at upload time. */
-  altEn?: string;
-  altVi?: string;
-}
-
-export interface MediaUpdateInput {
-  bucket: MediaBucket;
-  path: string;
-  title: string;
-  altEn: string;
-  altVi: string;
-}
-
-export interface MediaUpdateResult {
+export interface MediaDeleteResult {
   ok: boolean;
   error?: string;
+}
+
+/** Optional editable metadata supplied alongside a new upload (#102). */
+export interface MediaUploadMeta {
+  title?: string;
+  altEn?: string;
+  altVi?: string;
 }
 
 function isAllowedMime(mime: string): boolean {
@@ -47,156 +41,135 @@ function sanitizeFilename(filename: string): string {
   return base.replace(/^-+|-+$/g, "");
 }
 
-function titleFromFilename(filename: string): string {
-  return filename
-    .replace(/\.[^.]+$/, "")
-    .replace(/^\d+-/, "")
-    .replace(/[-_]+/g, " ")
-    .trim();
-}
-
 /**
- * Upload an image to a media bucket and record its catalog row. Runs through
- * the authenticated owner-session server client (getServerClient), so Storage
- * RLS (private.is_owner()) authorizes the operation — matching the accepted
- * #18 design where admin/browser writes use the owner RLS path. Dimensions are
- * parsed from the file header (PNG/JPEG/WebP) so the catalog carries real
- * width/height for layout without layout shift.
+ * Upload an image to a media bucket. Runs through the authenticated owner-session
+ * server client (getServerClient), so Storage RLS (private.is_owner()) authorizes
+ * the actual operation — matching the accepted #18 design where admin/browser
+ * writes use the normal owner RLS path rather than the service role.
+ *
+ * After Storage accepts the bytes, dimensions are parsed from the buffer and a
+ * media_assets catalog row is written (#102); a failed catalog write degrades
+ * to a warning because the file itself is usable.
  */
 export async function uploadMedia(
-  input: MediaUploadInput,
+  bucket: MediaBucket,
+  file: File,
+  meta?: MediaUploadMeta,
 ): Promise<MediaUploadResult> {
   if (!(await isAdminUser())) return { ok: false, error: "Unauthorized." };
 
-  if (!isAllowedMime(input.file.type)) {
+  if (!isAllowedMime(file.type)) {
     return { ok: false, error: "Only JPEG, PNG, or WebP images are allowed." };
   }
-  if (input.file.size > 10 * 1024 * 1024) {
+  if (file.size > 10 * 1024 * 1024) {
     return { ok: false, error: "Image must be 10 MB or smaller." };
   }
 
   const client = await getServerClient();
 
-  const ext = input.file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const base = sanitizeFilename(input.file.name.replace(/\.[^.]+$/, ""));
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  const base = sanitizeFilename(file.name.replace(/\.[^.]+$/, ""));
   const path = `${Date.now()}-${base}.${ext}`;
 
-  const arrayBuffer = await input.file.arrayBuffer();
-  const dimensions = readImageDimensions(arrayBuffer);
-  const { error } = await client.storage.from(input.bucket).upload(path, arrayBuffer, {
-    contentType: input.file.type,
+  const arrayBuffer = await file.arrayBuffer();
+  const { error } = await client.storage.from(bucket).upload(path, arrayBuffer, {
+    contentType: file.type,
     cacheControl: "3600",
     upsert: false,
   });
   if (error) return { ok: false, error: error.message };
 
-  const publicUrl = getMediaUrl(input.bucket, path);
+  const publicUrl = bucket === "resume-media"
+    ? `/api/resume-media/${encodeURIComponent(path)}`
+    : client.storage.from(bucket).getPublicUrl(path).data.publicUrl;
 
-  // Catalog row: title defaults to the filename, alt text defaults to title.
-  const title = (input.title ?? titleFromFilename(input.file.name)).trim() || path;
-  const { error: catalogError } = await client.from("media_assets").upsert(
-    {
-      bucket: input.bucket,
-      path,
-      title,
-      alt_en: input.altEn?.trim() ?? "",
-      alt_vi: input.altVi?.trim() ?? "",
-      width: dimensions?.width ?? null,
+  const dimensions = imageDimensions(new Uint8Array(arrayBuffer), file.type);
+
+  let warning: string | undefined;
+  try {
+    await upsertMediaAsset(client, {
+      altEn: meta?.altEn,
+      altVi: meta?.altVi,
+      bucket,
       height: dimensions?.height ?? null,
-      size_bytes: input.file.size,
-      mime: input.file.type,
-    },
-    { onConflict: "bucket,path" },
-  );
-  if (catalogError) {
-    // The object is uploaded but the catalog write failed. Surface the error
-    // so the operator knows the metadata is missing; the object itself remains
-    // in Storage (a re-upload would duplicate it, so we do NOT roll back here).
-    return { ok: false, error: `Uploaded but could not index metadata: ${catalogError.message}` };
+      mime: file.type,
+      path,
+      sizeBytes: file.size,
+      title: meta?.title,
+      width: dimensions?.width ?? null,
+    });
+  } catch {
+    warning =
+      "Uploaded, but saving metadata failed. You can edit this image's details later.";
   }
 
   revalidatePath("/admin/media");
-  return { ok: true, path, publicUrl };
+  return { ok: true, path, publicUrl, warning };
 }
 
-/** Edit catalog metadata (title / locale alt) for an existing object. */
-export async function updateMediaAsset(
-  input: MediaUpdateInput,
-): Promise<MediaUpdateResult> {
+export async function deleteMedia(
+  bucket: MediaBucket,
+  path: string,
+): Promise<MediaDeleteResult> {
   if (!(await isAdminUser())) return { ok: false, error: "Unauthorized." };
 
-  const title = input.title.trim();
-  if (!title) return { ok: false, error: "Title is required." };
-
   const client = await getServerClient();
-  const { error } = await client
-    .from("media_assets")
-    .update({
-      title,
-      alt_en: input.altEn.trim(),
-      alt_vi: input.altVi.trim(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("bucket", input.bucket)
-    .eq("path", input.path);
+
+  // Block deletion while the file is still referenced by published media rows
+  // (Issue #21 reference/orphan criterion). Fail closed: if the reference query
+  // errors, refuse deletion with an actionable message rather than deleting.
+  let references: number;
+  try {
+    references = await findMediaReferences(client, bucket, path);
+  } catch {
+    return {
+      ok: false,
+      error: "Cannot verify media references right now. Please retry; deletion was refused to avoid orphaning media.",
+    };
+  }
+  if (references > 0) {
+    return {
+      ok: false,
+      error: `Cannot delete: still referenced by ${references} media row(s). Remove the media from its project/resume first.`,
+    };
+  }
+
+  const { error } = await client.storage.from(bucket).remove([path]);
   if (error) return { ok: false, error: error.message };
 
+  // Keep the catalog aligned with Storage; a stale row would render as a ghost
+  // grid entry whose thumbnail 404s.
+  await deleteMediaAsset(client, bucket, path);
+
+  revalidatePath("/");
+  revalidatePath("/vi");
   revalidatePath("/admin/media");
   return { ok: true };
 }
 
-/** Fetch a single catalog row for the admin edit grid. */
-export async function getMediaAsset(
-  bucket: MediaBucket,
-  path: string,
-): Promise<MediaAsset | null> {
-  const client = await getServerClient();
-  const { data, error } = await client
-    .from("media_assets")
-    .select(
-      "bucket, path, title, alt_en, alt_vi, width, height, size_bytes, mime, created_at, updated_at",
-    )
-    .eq("bucket", bucket)
-    .eq("path", path)
-    .maybeSingle();
-  if (error || !data) return null;
-
-  const row = data as unknown as {
-    bucket: MediaBucket;
-    path: string;
-    title: string;
-    alt_en: string;
-    alt_vi: string;
-    width: number | null;
-    height: number | null;
-    size_bytes: number | null;
-    mime: string | null;
-    created_at: string;
-    updated_at: string;
-  };
-  return {
-    bucket: row.bucket,
-    path: row.path,
-    title: row.title,
-    altEn: row.alt_en,
-    altVi: row.alt_vi,
-    width: row.width,
-    height: row.height,
-    sizeBytes: row.size_bytes,
-    mime: row.mime,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    url: getMediaUrl(row.bucket, row.path),
-  };
+export interface MediaDetailsResult {
+  ok: boolean;
+  error?: string;
 }
 
-/**
- * Server action used by the client MediaPickerModal to page/search the catalog
- * (keyset cursor mode). Runs through the owner-session client.
- */
-export async function listMediaAssetsAction(
-  request: Parameters<typeof listMediaAssets>[0],
-): Promise<Awaited<ReturnType<typeof listMediaAssets>>> {
-  if (!(await isAdminUser())) return { items: [], nextCursor: null };
-  return listMediaAssets(request);
+/** Editable metadata for one asset (#102) — title + bilingual alt text. */
+export async function updateMediaDetails(
+  bucket: MediaBucket,
+  path: string,
+  meta: { altEn: string; altVi: string; title: string },
+): Promise<MediaDetailsResult> {
+  if (!(await isAdminUser())) return { ok: false, error: "Unauthorized." };
+  if (!meta.title.trim()) {
+    return { ok: false, error: "Title is required." };
+  }
+
+  const client = await getServerClient();
+  try {
+    await updateMediaAssetMeta(client, bucket, path, meta);
+  } catch {
+    return { ok: false, error: "Could not save the media details. Retry shortly." };
+  }
+
+  revalidatePath("/admin/media");
+  return { ok: true };
 }
