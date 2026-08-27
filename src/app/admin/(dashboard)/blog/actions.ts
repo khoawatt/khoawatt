@@ -3,7 +3,7 @@
 import { revalidatePath, updateTag } from "next/cache";
 
 import { renderMarkdown } from "@/features/blog/markdown";
-import { BLOG_CACHE_TAG } from "@/features/blog/cache-tag";
+import { BLOG_CACHE_TAG } from "@/features/blog/repository";
 import { getServerClient, isAdminUser } from "@/features/cms/session";
 import { required } from "@/features/cms/validation";
 

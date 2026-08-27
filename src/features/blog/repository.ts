@@ -20,15 +20,12 @@
  * resolves to `null` / an empty listing so routes can map to `notFound()` /
  * empty state rather than a 500.
  */
-import "server-only";
-
 import type { Locale } from "@/features/i18n/config";
 import { unstable_cache } from "next/cache";
 
 import { hasCmsConfig } from "@/features/cms/config";
 import { getMediaPublicUrl } from "@/features/cms/media";
 import { getServiceClient } from "@/features/cms/server";
-import { BLOG_CACHE_TAG } from "./cache-tag";
 import { renderMarkdown } from "./markdown";
 import { readingTimeMinutes } from "./reading-time";
 import type {
@@ -38,6 +35,8 @@ import type {
   PostDetail,
   PostListItem,
 } from "./types";
+
+export const BLOG_CACHE_TAG = "blog";
 
 const PAGE_SIZE = 6;
 const RELATED_POSTS_LIMIT = 3;

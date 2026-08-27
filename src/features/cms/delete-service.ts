@@ -3,7 +3,7 @@
 import { revalidatePath, updateTag } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { BLOG_CACHE_TAG } from "@/features/blog/cache-tag";
+import { BLOG_CACHE_TAG } from "@/features/blog/repository";
 import type { MediaBucket } from "./media";
 import { getServerClient, isAdminUser } from "./session";
 
