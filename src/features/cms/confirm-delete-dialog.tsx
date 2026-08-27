@@ -187,7 +187,6 @@ export function ConfirmDeleteDialog({
   }, [open]);
 
   if (!open) return null;
-  if (typeof document === "undefined") return null;
 
   const labelById = new Map(items.map((item) => [item.id, item.label]));
   const count = items.length;
