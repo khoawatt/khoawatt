@@ -11,6 +11,7 @@ import type { MediaBucket } from "./media";
 export interface MediaUploadResult {
   ok: boolean;
   error?: string;
+  warning?: string;
   path?: string;
   publicUrl?: string;
 }
@@ -62,10 +63,28 @@ function titleFromFilename(filename: string): string {
  * #18 design where admin/browser writes use the owner RLS path. Dimensions are
  * parsed from the file header (PNG/JPEG/WebP) so the catalog carries real
  * width/height for layout without layout shift.
+ *
+ * Supports both the new object signature `uploadMedia({bucket,file,title,altEn,altVi})`
+ * and the legacy `uploadMedia(bucket,file,meta)` used by demo/21bec74's
+ * MediaLibraryGrid/MediaUploadPanel for backwards compatibility.
  */
 export async function uploadMedia(
-  input: MediaUploadInput,
+  bucketOrInput: MediaBucket | MediaUploadInput,
+  file?: File,
+  meta?: MediaUploadMeta,
 ): Promise<MediaUploadResult> {
+  const input: MediaUploadInput =
+    typeof bucketOrInput === "string"
+      ? {
+          bucket: bucketOrInput as MediaBucket,
+          file: file as File,
+          title: meta?.title,
+          altEn: meta?.altEn,
+          altVi: meta?.altVi,
+        }
+      : (bucketOrInput as MediaUploadInput);
+
+  if (!input.file) return { ok: false, error: "No file provided." };
   if (!(await isAdminUser())) return { ok: false, error: "Unauthorized." };
 
   if (!isAllowedMime(input.file.type)) {
@@ -188,6 +207,39 @@ export async function getMediaAsset(
     updatedAt: row.updated_at,
     url: getMediaUrl(row.bucket, row.path),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Compatibility for demo/21bec74's MediaLibraryGrid (old API) — keep while
+// both the new MediaPickerModal (new API) and the demo grid (old API) coexist.
+// ---------------------------------------------------------------------------
+
+export interface MediaUploadMeta {
+  title: string;
+  altEn: string;
+  altVi: string;
+}
+
+/** Old signature: uploadMedia(bucket, file, meta) — delegate to new input object. */
+export async function deleteMedia(
+  bucket: MediaBucket,
+  path: string,
+): Promise<MediaUpdateResult> {
+  if (!(await isAdminUser())) return { ok: false, error: "Unauthorized." };
+  const client = await getServerClient();
+  const { error } = await client.storage.from(bucket).remove([path]);
+  if (error) return { ok: false, error: error.message };
+  await client.from("media_assets").delete().eq("bucket", bucket).eq("path", path);
+  revalidatePath("/admin/media");
+  return { ok: true };
+}
+
+export async function updateMediaDetails(
+  bucket: MediaBucket,
+  path: string,
+  meta: MediaUploadMeta,
+): Promise<MediaUpdateResult> {
+  return updateMediaAsset({ bucket, path, title: meta.title, altEn: meta.altEn, altVi: meta.altVi });
 }
 
 /**
