@@ -3,12 +3,8 @@ import type { MediaBucket } from "@/features/cms/media";
 import { getServerClient } from "@/features/cms/session";
 import { MediaUploadForm } from "./media-upload-form";
 import { AdminPage } from "../admin-page";
-import {
-  BulkDeleteBar,
-  BulkSelectionProvider,
-  DeleteActionButton,
-  SelectionCheckbox,
-} from "@/features/cms/delete-actions";
+import { BulkDeleteBar, BulkSelectionProvider } from "@/features/cms/delete-actions";
+import { MediaGrid } from "./media-grid";
 
 export const metadata = {
   title: "Admin media",
@@ -21,7 +17,7 @@ const buckets: Array<{ id: MediaBucket; label: string; note: string }> = [
   { id: "portfolio", label: "Portfolio (public)", note: "Profile / social images." },
 ];
 
-const PAGE_SIZE = 24;
+const PAGE_SIZE = 12;
 
 interface AdminMediaPageProps {
   searchParams: Promise<{
@@ -107,42 +103,7 @@ export default async function AdminMediaPage({
               {search ? "No files match your search." : "No files uploaded yet."}
             </p>
           ) : (
-            <ul className="admin-media-grid">
-              {items.map((item) => (
-                <li className="admin-media-grid__item" key={item.path}>
-                  <div className="admin-media-preview">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      alt={item.altEn || item.title || item.path}
-                      height={item.height ?? 80}
-                      loading="lazy"
-                      src={item.url}
-                      width={item.width ?? 120}
-                    />
-                  </div>
-                  <div className="admin-media-meta">
-                    <code title={item.path}>{item.path}</code>
-                    <span className="admin-media-title">{item.title || "Untitled"}</span>
-                    <span className="admin-media-dims">
-                      {item.width && item.height
-                        ? `${item.width}×${item.height}`
-                        : "—"}
-                      {item.sizeBytes ? ` · ${formatBytes(item.sizeBytes)}` : ""}
-                      {item.mime ? ` · ${item.mime}` : ""}
-                    </span>
-                    <div className="admin-media-actions">
-                      <SelectionCheckbox id={item.path} label={item.title || item.path} />
-                      <DeleteActionButton
-                        bucket={activeBucket}
-                        entity="media"
-                        item={{ id: item.path, label: item.title || item.path }}
-                        noun="file"
-                      />
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <MediaGrid bucket={activeBucket} items={items} />
           )}
 
           {totalPages > 1 ? (
@@ -172,10 +133,4 @@ export default async function AdminMediaPage({
       </section>
     </AdminPage>
   );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

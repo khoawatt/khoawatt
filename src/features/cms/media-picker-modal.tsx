@@ -200,6 +200,7 @@ export function MediaPickerModal({
   }, [open]);
 
   if (!open) return null;
+  if (typeof document === "undefined") return null;
 
   function choose(item: MediaAsset) {
     onSelect({
