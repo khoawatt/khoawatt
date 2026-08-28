@@ -33,6 +33,7 @@ import type {
   BlogCategoryNavEntry,
   BlogCategoryView,
   BlogListingView,
+  BlogTagView,
   PostDetail,
   PostListItem,
 } from "./types";
@@ -290,7 +291,7 @@ export async function queryPostBySlug(
     const relatedPosts = await queryRelatedPosts(locale, row.id, tagIds);
 
     const [detail] = await enrichCoverAlts(
-      [{ ...item, tags, html, toc, relatedPosts }],
+      [{ ...item, tags, html, toc, contentMd: translation.content_md, relatedPosts }],
       [row.cover_bucket_path ?? undefined],
       locale,
     );
@@ -323,6 +324,92 @@ export async function queryCategoryPage(
 
     const listing = await loadPublishedPosts(locale, page, category.id);
     return { slug: category.slug, name: categoryName.name, listing };
+  } catch {
+    return null;
+  }
+}
+
+interface TagRowWithTranslations {
+  id: string;
+  slug: string;
+  blog_tag_translations: CategoryNameRow[];
+}
+
+async function loadPublishedPostsByTag(
+  locale: Locale,
+  page: number,
+  tagId: string,
+): Promise<BlogListingView> {
+  const client = getServiceClient();
+  if (!hasCmsConfig() || !client) return { posts: [], page, totalPages: 1 };
+
+  try {
+    const from = (page - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
+    const { data, error, count } = await client
+      .from("blog_posts")
+      .select(`${postSelect()}, blog_post_tags!inner(tag_id)`, { count: "exact" })
+      .eq("status", "published")
+      .eq("blog_post_tags.tag_id", tagId)
+      .order("published_at", { ascending: false })
+      .order("id")
+      .range(from, to);
+
+    if (error || !data) return { posts: [], page, totalPages: 1 };
+
+    const posts = await enrichCoverAlts(
+      (data as unknown as PostRow[])
+        .map((row) => mapPostListItem(row, locale))
+        .filter((post): post is PostListItem => post !== null),
+      (data as unknown as PostRow[]).map((row) => row.cover_bucket_path ?? undefined),
+      locale,
+    );
+
+    return {
+      posts,
+      page,
+      totalPages: Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE)),
+    };
+  } catch {
+    return { posts: [], page, totalPages: 1 };
+  }
+}
+
+/** Uncached core: tag archive header + its published listing. */
+export async function queryTagPage(
+  locale: Locale,
+  slug: string,
+  page: number,
+): Promise<BlogTagView | null> {
+  const client = getServiceClient();
+  if (!hasCmsConfig() || !client) return null;
+
+  try {
+    const { data, error } = await client
+      .from("blog_tags")
+      .select("id, slug, blog_tag_translations(locale, name)")
+      .eq("slug", slug)
+      .maybeSingle();
+    if (error || !data) return null;
+
+    const tag = data as TagRowWithTranslations;
+    const tagName = localeRow(tag.blog_tag_translations, locale);
+    if (!tagName) return null;
+
+    const listing = await loadPublishedPostsByTag(locale, page, tag.id);
+    // If tag has no published posts, treat as not found for SEO (avoid empty tag pages)
+    if (listing.posts.length === 0 && listing.totalPages === 1) {
+      // Check if there are any published posts at all for this tag
+      const { count } = await client
+        .from("blog_posts")
+        .select("id, blog_post_tags!inner(tag_id)", { count: "exact", head: true })
+        .eq("status", "published")
+        .eq("blog_post_tags.tag_id", tag.id);
+      if (!count || count === 0) return null;
+    }
+
+    return { slug: tag.slug, name: tagName.name, listing };
   } catch {
     return null;
   }
@@ -370,6 +457,33 @@ export async function queryCategoryIndex(): Promise<{ slug: string }[]> {
     return (data as unknown as { slug: string; blog_posts: unknown[] }[])
       .filter((row) => row.blog_posts.length > 0)
       .map((row) => ({ slug: row.slug }));
+  } catch {
+    return [];
+  }
+}
+
+/** Uncached core: tag slugs that currently have published posts. */
+export async function queryTagIndex(): Promise<{ slug: string }[]> {
+  const client = getServiceClient();
+  if (!hasCmsConfig() || !client) return [];
+
+  try {
+    const { data, error } = await client
+      .from("blog_tags")
+      .select("slug, blog_post_tags!inner(blog_posts!inner(status))")
+      .eq("blog_post_tags.blog_posts.status", "published");
+    if (error || !data) return [];
+
+    // Deduplicate slugs (inner join may return duplicates if multiple posts per tag)
+    const seen = new Set<string>();
+    const result: { slug: string }[] = [];
+    for (const row of data as unknown as { slug: string }[]) {
+      if (!seen.has(row.slug)) {
+        seen.add(row.slug);
+        result.push({ slug: row.slug });
+      }
+    }
+    return result;
   } catch {
     return [];
   }
@@ -478,6 +592,12 @@ export const getCategoryPage = unstable_cache(
   { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
 );
 
+export const getTagPage = unstable_cache(
+  (locale: Locale, slug: string, page: number) => queryTagPage(locale, slug, page),
+  ["blog", "tag-page"],
+  { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
+);
+
 export const getPublishedPostIndex = unstable_cache(
   () => queryPublishedPostIndex(),
   ["blog", "published-post-index"],
@@ -487,6 +607,12 @@ export const getPublishedPostIndex = unstable_cache(
 export const getCategoryIndex = unstable_cache(
   () => queryCategoryIndex(),
   ["blog", "category-index"],
+  { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
+);
+
+export const getTagIndex = unstable_cache(
+  () => queryTagIndex(),
+  ["blog", "tag-index"],
   { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
 );
 

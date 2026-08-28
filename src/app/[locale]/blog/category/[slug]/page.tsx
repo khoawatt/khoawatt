@@ -3,8 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BlogCardGrid } from "@/components/blog/blog-card-grid";
+import { BlogCategoryDropdown } from "@/components/blog/blog-category-dropdown";
 import { BlogHero } from "@/components/blog/blog-hero";
-import { CategoryNav } from "@/components/blog/category-nav";
 import { JsonLdScript } from "@/components/blog/json-ld";
 import { Pagination } from "@/components/blog/pagination";
 import { PageShell } from "@/components/layout/page-shell";
@@ -76,7 +76,8 @@ export default async function BlogCategoryPage({
           size="compact"
           title={category.name}
         />
-        <CategoryNav
+        <BlogCategoryDropdown
+          activeSlug={category.slug}
           entries={categories}
           locale={locale}
           messages={messages.blog}

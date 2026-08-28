@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 
 import { BlogCardGrid } from "@/components/blog/blog-card-grid";
+import { BlogCategoryDropdown } from "@/components/blog/blog-category-dropdown";
 import { BlogHero } from "@/components/blog/blog-hero";
-import { CategoryNav } from "@/components/blog/category-nav";
 import { Pagination } from "@/components/blog/pagination";
 import { PageShell } from "@/components/layout/page-shell";
 import { Section } from "@/components/layout/section";
@@ -70,7 +70,8 @@ export default async function BlogPageNumber({
           intro={messages.blog.intro}
           title={messages.blog.title}
         />
-        <CategoryNav
+        <BlogCategoryDropdown
+          activeSlug={null}
           entries={categories}
           locale={locale}
           messages={messages.blog}

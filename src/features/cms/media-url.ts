@@ -10,5 +10,9 @@ export function publicMediaUrl(bucket: MediaBucket, path: string): string {
     return `/api/resume-media/${encodeURIComponent(path)}`;
   }
   const base = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/, "");
-  return `${base}/storage/v1/object/public/${bucket}/${encodeURIComponent(path)}`;
+  const encodedPath = path
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  return `${base}/storage/v1/object/public/${bucket}/${encodedPath}`;
 }

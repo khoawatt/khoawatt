@@ -46,6 +46,15 @@ export interface BlogMessages {
   categoryPostCount: string;
   readMoreLabel: string;
   backToTopLabel: string;
+  filterLabel: string;
+  allPostsLabel: string;
+  tocExpandLabel: string;
+  tocCollapseLabel: string;
+  markdownTooltip: string;
+  markdownCopyLabel: string;
+  markdownViewLabel: string;
+  markdownCopiedLabel: string;
+  markdownCopyErrorLabel: string;
 }
 
 export interface PortfolioMessages {

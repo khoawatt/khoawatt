@@ -8,6 +8,7 @@ import type { Locale } from "@/features/i18n/config";
 import type { BlogMessages } from "@/features/i18n/messages/types";
 import { getLocalizedPathname } from "@/features/i18n/routing";
 
+import { MarkdownCopyButton } from "./markdown-copy-button";
 import { PostCard } from "./post-card";
 import { TableOfContents } from "./table-of-contents";
 
@@ -67,7 +68,8 @@ export function Article({ locale, messages, post }: Readonly<ArticleProps>) {
 
       <div className="blog-article__layout">
         <TableOfContents
-          backToTopLabel={messages.backToTopLabel}
+          collapseLabel={messages.tocCollapseLabel}
+          expandLabel={messages.tocExpandLabel}
           label={messages.onThisPage}
           toc={post.toc}
         />
@@ -84,58 +86,71 @@ export function Article({ locale, messages, post }: Readonly<ArticleProps>) {
               {post.category.name}
             </Link>
             <h1 className="blog-article__title">{post.title}</h1>
-            <div className="blog-article__byline">
-              <span aria-hidden="true" className="blog-article__avatar">
-                <Image
-                  alt=""
-                  height={1280}
-                  src={profile.hero.image.src}
-                  style={{ objectPosition: profile.hero.image.focalPoint }}
-                  width={852}
-                />
-              </span>
-              <span className="blog-article__byline-name">
-                {profile.name}
-                <span className="blog-article__byline-role">{profile.role}</span>
-              </span>
-              <span className="blog-article__byline-meta">
-                <svg
-                  aria-hidden="true"
-                  fill="none"
-                  height="14"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                  width="14"
-                >
-                  <rect height="18" rx="2" width="18" x="3" y="4" />
-                  <path d="M16 2v4M8 2v4M3 10h18" />
-                </svg>
-                <time dateTime={post.publishedAt}>{date}</time>
-                <svg
-                  aria-hidden="true"
-                  fill="none"
-                  height="14"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                  width="14"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 6v6l4 2" />
-                </svg>
-                <span>{readTime}</span>
-              </span>
+            <div className="blog-article__byline-row">
+              <div className="blog-article__byline">
+                <span aria-hidden="true" className="blog-article__avatar">
+                  <Image
+                    alt=""
+                    height={1280}
+                    src={profile.hero.image.src}
+                    style={{ objectPosition: profile.hero.image.focalPoint }}
+                    width={852}
+                  />
+                </span>
+                <span className="blog-article__byline-name">
+                  {profile.name}
+                  <span className="blog-article__byline-role">{profile.role}</span>
+                </span>
+                <span className="blog-article__byline-meta">
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    height="14"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    width="14"
+                  >
+                    <rect height="18" rx="2" width="18" x="3" y="4" />
+                    <path d="M16 2v4M8 2v4M3 10h18" />
+                  </svg>
+                  <time dateTime={post.publishedAt}>{date}</time>
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    height="14"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    width="14"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 6v6l4 2" />
+                  </svg>
+                  <span>{readTime}</span>
+                </span>
+              </div>
+              <MarkdownCopyButton
+                contentMd={post.contentMd}
+                locale={locale}
+                messages={messages}
+                slug={post.slug}
+              />
             </div>
             {post.tags.length > 0 ? (
               <ul aria-label={messages.tagsLabel} className="blog-article__tags">
                 {post.tags.map((tag) => (
                   <li className="blog-article__tag" key={tag.slug}>
-                    {tag.name}
+                    <Link
+                      className="blog-article__tag-link"
+                      href={getLocalizedPathname(`/blog/tag/${tag.slug}`, locale)}
+                    >
+                      {tag.name}
+                    </Link>
                   </li>
                 ))}
               </ul>

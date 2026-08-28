@@ -3,6 +3,7 @@ import type { MetadataRoute } from "next";
 import {
   getCategoryIndex,
   getPublishedPostIndex,
+  getTagIndex,
 } from "@/features/blog/repository";
 import { locales } from "@/features/i18n/config";
 import { getLocalizedPathname } from "@/features/i18n/routing";
@@ -21,9 +22,10 @@ function languagesFor(pathname: string): Record<string, string> {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [posts, categories] = await Promise.all([
+  const [posts, categories, tags] = await Promise.all([
     getPublishedPostIndex(),
     getCategoryIndex(),
+    getTagIndex(),
   ]);
 
   const homeLanguages = languagesFor("/");
@@ -71,6 +73,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: "monthly" as const,
         priority: 0.6,
         alternates: { languages: languagesFor(`/blog/category/${category.slug}`) },
+      })),
+    ),
+    ...tags.flatMap((tag) =>
+      locales.map((locale) => ({
+        url: getAbsoluteUrl(getLocalizedPathname(`/blog/tag/${tag.slug}`, locale)),
+        lastModified: new Date(),
+        changeFrequency: "monthly" as const,
+        priority: 0.5,
+        alternates: { languages: languagesFor(`/blog/tag/${tag.slug}`) },
       })),
     ),
   ];

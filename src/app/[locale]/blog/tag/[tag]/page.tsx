@@ -1,76 +1,51 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, permanentRedirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 import { BlogCardGrid } from "@/components/blog/blog-card-grid";
 import { BlogCategoryDropdown } from "@/components/blog/blog-category-dropdown";
 import { BlogHero } from "@/components/blog/blog-hero";
+import { JsonLdScript } from "@/components/blog/json-ld";
 import { Pagination } from "@/components/blog/pagination";
 import { PageShell } from "@/components/layout/page-shell";
 import { Section } from "@/components/layout/section";
-import {
-  getCategoryNav,
-  getCategoryPage,
-} from "@/features/blog/repository";
-import { getBlogCategoryMetadata } from "@/features/blog/seo";
+import { getCategoryNav, getTagPage } from "@/features/blog/repository";
+import { getBlogTagMetadata, tagBreadcrumbJsonLd } from "@/features/blog/seo";
 import { getMessages } from "@/features/i18n/messages";
 import { getLocalizedPathname } from "@/features/i18n/routing";
 import { getLocaleFromParams } from "@/features/i18n/server";
 
-interface BlogCategoryPageNumberProps {
-  params: Promise<{ locale: string; slug: string; n: string }>;
+interface BlogTagPageProps {
+  params: Promise<{ locale: string; tag: string }>;
 }
 
 export async function generateMetadata({
   params,
-}: Readonly<BlogCategoryPageNumberProps>): Promise<Metadata> {
+}: Readonly<BlogTagPageProps>): Promise<Metadata> {
   const locale = await getLocaleFromParams(params);
-  const { slug, n } = await params;
+  const { tag } = await params;
   const messages = await getMessages(locale);
-  const category = await getCategoryPage(locale, slug, 1);
+  const tagView = await getTagPage(locale, tag, 1);
 
-  if (!category) return {};
+  if (!tagView) return {};
 
-  return getBlogCategoryMetadata(
-    locale,
-    category,
-    messages.blog,
-    messages.metadata.title,
-    Number(n),
-  );
+  return getBlogTagMetadata(locale, tagView, messages.blog, messages.metadata.title);
 }
 
-export default async function BlogCategoryPageNumber({
-  params,
-}: Readonly<BlogCategoryPageNumberProps>) {
+export default async function BlogTagPage({ params }: Readonly<BlogTagPageProps>) {
   const locale = await getLocaleFromParams(params);
-  const { slug, n } = await params;
-  const page = Number(n);
-
-  // Same canonical policy as /blog/page/[n]: page 1 lives at the category
-  // root; invalid or out-of-range pages are soft-404s.
-  if (!Number.isInteger(page) || page < 1) {
-    notFound();
-  }
-
-  const categoryRoot = getLocalizedPathname(`/blog/category/${slug}`, locale);
-  if (page === 1) {
-    permanentRedirect(categoryRoot);
-  }
-
+  const { tag } = await params;
   const messages = await getMessages(locale);
-  const [category, categories] = await Promise.all([
-    getCategoryPage(locale, slug, page),
+  const [tagView, categories] = await Promise.all([
+    getTagPage(locale, tag, 1),
     getCategoryNav(locale),
   ]);
 
-  if (!category || page > category.listing.totalPages) {
-    notFound();
-  }
+  if (!tagView) notFound();
 
   const homePath = getLocalizedPathname("/", locale);
   const blogPath = getLocalizedPathname("/blog", locale);
-  const categoryBasePath = `/blog/category/${category.slug}`;
+  const tagBasePath = `/blog/tag/${tagView.slug}`;
 
   return (
     <PageShell>
@@ -83,19 +58,17 @@ export default async function BlogCategoryPageNumber({
             <li className="blog-breadcrumb__item">
               <Link href={blogPath}>{messages.blog.eyebrow}</Link>
             </li>
-            <li aria-current="page" className="blog-breadcrumb__item blog-breadcrumb__item--current">
-              {category.name}
+            <li
+              aria-current="page"
+              className="blog-breadcrumb__item blog-breadcrumb__item--current"
+            >
+              {tagView.name}
             </li>
           </ol>
         </nav>
-        <BlogHero
-          badge={messages.blog.pageNumberLabel.replace("{n}", String(page))}
-          eyebrow={messages.blog.eyebrow}
-          size="compact"
-          title={category.name}
-        />
+        <BlogHero eyebrow={messages.blog.eyebrow} size="compact" title={tagView.name} />
         <BlogCategoryDropdown
-          activeSlug={category.slug}
+          activeSlug={null}
           entries={categories}
           locale={locale}
           messages={messages.blog}
@@ -104,16 +77,17 @@ export default async function BlogCategoryPageNumber({
           emptyLabel={messages.blog.emptyState}
           locale={locale}
           messages={messages.blog}
-          posts={category.listing.posts}
+          posts={tagView.listing.posts}
         />
         <Pagination
-          basePath={categoryBasePath}
+          basePath={tagBasePath}
           locale={locale}
           messages={messages.blog}
-          page={category.listing.page}
-          totalPages={category.listing.totalPages}
+          page={tagView.listing.page}
+          totalPages={tagView.listing.totalPages}
         />
       </Section>
+      <JsonLdScript data={tagBreadcrumbJsonLd(locale, tagView, messages.blog)} />
     </PageShell>
   );
 }

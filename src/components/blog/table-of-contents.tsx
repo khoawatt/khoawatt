@@ -5,9 +5,10 @@ import { useEffect, useState } from "react";
 import type { TocEntry } from "@/features/blog/types";
 
 interface TableOfContentsProps {
-  backToTopLabel: string;
   label: string;
   toc: TocEntry[];
+  expandLabel?: string;
+  collapseLabel?: string;
 }
 
 /**
@@ -17,11 +18,13 @@ interface TableOfContentsProps {
  * visible at a time, so only one copy is focusable/announced.
  */
 export function TableOfContents({
-  backToTopLabel,
   label,
   toc,
+  expandLabel,
+  collapseLabel,
 }: Readonly<TableOfContentsProps>) {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [wideCollapsed, setWideCollapsed] = useState(false);
 
   useEffect(() => {
     if (toc.length === 0) return;
@@ -51,17 +54,6 @@ export function TableOfContents({
   }, [toc]);
 
   if (toc.length === 0) return null;
-
-  function scrollToTop() {
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-
-    window.scrollTo({
-      behavior: reduceMotion ? "auto" : "smooth",
-      top: 0,
-    });
-  }
 
   const list = (
     <nav aria-label={label} className="blog-toc__nav">
@@ -102,12 +94,20 @@ export function TableOfContents({
     </svg>
   );
 
+  // Wide toggle — replaces the previous "scroll to top" action.
+  // The button now collapses/expands the sticky TOC list on desktop.
+  const toggleLabel = wideCollapsed
+    ? (expandLabel ?? `Show ${label}`)
+    : (collapseLabel ?? `Hide ${label}`);
   const backToTop = (
     <button
-      aria-label={backToTopLabel}
+      aria-controls="toc-list"
+      aria-expanded={!wideCollapsed}
+      aria-label={toggleLabel}
       className="blog-toc__top"
-      onClick={scrollToTop}
-      title={backToTopLabel}
+      data-collapsed={wideCollapsed ? "true" : "false"}
+      onClick={() => setWideCollapsed((v) => !v)}
+      title={toggleLabel}
       type="button"
     >
       <svg
@@ -136,7 +136,11 @@ export function TableOfContents({
         {list}
       </details>
 
-      <aside aria-label={label} className="blog-toc blog-toc--wide">
+      <aside
+        aria-label={label}
+        className="blog-toc blog-toc--wide"
+        data-collapsed={wideCollapsed ? "true" : "false"}
+      >
         <div className="blog-toc__head">
           <p className="blog-toc__title">
             {titleIcon}
@@ -144,7 +148,14 @@ export function TableOfContents({
           </p>
           {backToTop}
         </div>
-        {list}
+        <div
+          className="blog-toc__collapsible"
+          data-collapsed={wideCollapsed ? "true" : "false"}
+          hidden={wideCollapsed}
+          id="toc-list"
+        >
+          {list}
+        </div>
       </aside>
     </>
   );

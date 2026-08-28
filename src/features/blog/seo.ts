@@ -15,7 +15,7 @@ import { getLocalizedPathname } from "@/features/i18n/routing";
 import { getAbsoluteUrl } from "@/features/seo/config";
 import { getSeoMetadata } from "@/features/seo/metadata";
 
-import type { BlogCategoryView, PostDetail, PostListItem } from "./types";
+import type { BlogCategoryView, BlogTagView, PostDetail, PostListItem } from "./types";
 
 const ogLocaleBySiteLocale: Record<Locale, string> = {
   en: "en_US",
@@ -60,6 +60,23 @@ export function getBlogCategoryMetadata(
     title: `${category.name} — ${metadataTitle}`,
     description,
     pathname: `/blog/category/${category.slug}${pageSuffix}`,
+  });
+}
+
+export function getBlogTagMetadata(
+  locale: Locale,
+  tag: BlogTagView,
+  messages: BlogMessages,
+  metadataTitle: string,
+  page = 1,
+): Metadata {
+  const description = `${messages.intro} Tag: ${tag.name}.`;
+  const pageSuffix = page > 1 ? `/page/${page}` : "";
+  return getSeoMetadata({
+    locale,
+    title: `${tag.name} — ${metadataTitle}`,
+    description,
+    pathname: `/blog/tag/${tag.slug}${pageSuffix}`,
   });
 }
 
@@ -202,6 +219,28 @@ export function categoryBreadcrumbJsonLd(
       { "@type": "ListItem", position: 1, name: messages.homeLabel, item: homeUrl },
       { "@type": "ListItem", position: 2, name: messages.eyebrow, item: blogUrl },
       { "@type": "ListItem", position: 3, name: category.name, item: categoryUrl },
+    ],
+  });
+}
+
+export function tagBreadcrumbJsonLd(
+  locale: Locale,
+  tag: BlogTagView,
+  messages: BlogMessages,
+): string {
+  const homeUrl = getAbsoluteUrl(getLocalizedPathname("/", locale));
+  const blogUrl = getAbsoluteUrl(getLocalizedPathname("/blog", locale));
+  const tagUrl = getAbsoluteUrl(
+    getLocalizedPathname(`/blog/tag/${tag.slug}`, locale),
+  );
+
+  return jsonLdString({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: messages.homeLabel, item: homeUrl },
+      { "@type": "ListItem", position: 2, name: messages.eyebrow, item: blogUrl },
+      { "@type": "ListItem", position: 3, name: tag.name, item: tagUrl },
     ],
   });
 }

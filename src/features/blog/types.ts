@@ -30,6 +30,7 @@ export type PostDetail = PostListItem & {
   tags: { slug: string; name: string }[];
   toc: TocEntry[];
   html: string;
+  contentMd: string;
   relatedPosts: PostListItem[];
 };
 
@@ -40,6 +41,12 @@ export interface BlogListingView {
 }
 
 export interface BlogCategoryView {
+  slug: string;
+  name: string;
+  listing: BlogListingView;
+}
+
+export interface BlogTagView {
   slug: string;
   name: string;
   listing: BlogListingView;
