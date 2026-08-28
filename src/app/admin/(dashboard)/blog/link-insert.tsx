@@ -111,7 +111,6 @@ export function LinkInsertButton({
                   handleInsert();
                 }
               }}
-              required
             />
           </label>
           <label className="admin-field">
