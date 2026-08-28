@@ -13,6 +13,7 @@ import {
   type BlogPostFormData,
 } from "./actions";
 import type { AdminCategoryRow, AdminPostRow, AdminTagRow } from "./data";
+import { LinkInsertButton } from "./link-insert";
 import { MediaInsertButton } from "./media-insert";
 import { MediaPickerModal } from "../media/media-picker-modal";
 import { publicMediaUrl } from "@/features/cms/media-url";
@@ -95,6 +96,40 @@ export function PostForm({
         textarea.focus();
       }
     });
+  }
+
+  function insertMarkdownLink(tab: LocaleTab, link: { url: string; text: string }) {
+    const textarea = tab === "en" ? enContentRef.current : viContentRef.current;
+    const value = tab === "en" ? contentMdEn : contentMdVi;
+    const setter = tab === "en" ? setContentMdEn : setContentMdVi;
+
+    const start = textarea?.selectionStart ?? value.length;
+    const end = textarea?.selectionEnd ?? value.length;
+    const selected = value.slice(start, end);
+    const linkText = link.text || selected || link.url;
+    const markdown = `[${linkText}](${link.url})`;
+
+    // Replace selection if any, otherwise insert at cursor
+    const nextValue = `${value.slice(0, start)}${markdown}${value.slice(end)}`;
+    setter(nextValue);
+
+    window.requestAnimationFrame(() => {
+      if (textarea) {
+        const cursor = start + markdown.length;
+        textarea.selectionStart = textarea.selectionEnd = cursor;
+        textarea.focus();
+      }
+    });
+  }
+
+  function getSelectedText(tab: LocaleTab): string {
+    const textarea = tab === "en" ? enContentRef.current : viContentRef.current;
+    if (!textarea) return "";
+    const start = textarea.selectionStart ?? 0;
+    const end = textarea.selectionEnd ?? 0;
+    if (start === end) return "";
+    const value = tab === "en" ? contentMdEn : contentMdVi;
+    return value.slice(start, end);
   }
 
   const [newTagName, setNewTagName] = useState("");
@@ -382,6 +417,10 @@ export function PostForm({
                     <MediaInsertButton
                       onInsert={(image) => insertMarkdownImage("en", image)}
                     />
+                    <LinkInsertButton
+                      onInsert={(link) => insertMarkdownLink("en", link)}
+                      getSelectedText={() => getSelectedText("en")}
+                    />
                     <button
                       className="admin-link-button"
                       disabled={isPreviewing}
@@ -430,6 +469,10 @@ export function PostForm({
                   <div className="admin-form-row">
                     <MediaInsertButton
                       onInsert={(image) => insertMarkdownImage("vi", image)}
+                    />
+                    <LinkInsertButton
+                      onInsert={(link) => insertMarkdownLink("vi", link)}
+                      getSelectedText={() => getSelectedText("vi")}
                     />
                     <button
                       className="admin-link-button"
