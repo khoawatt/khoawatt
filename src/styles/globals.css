@@ -4487,7 +4487,7 @@ video {
 .blog-article__header {
   display: grid;
   gap: var(--space-4);
-  margin-block-end: var(--space-8);
+  margin-block-end: var(--space-12);
 }
 
 .blog-article__title {
@@ -4673,11 +4673,20 @@ video {
   display: none;
 }
 
+.markdown-action__tooltip-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-muted);
+}
+
 .markdown-action__tooltip-title {
-  margin: 0 0 var(--space-2);
+  margin: 0;
   color: var(--color-text);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.02em;
 }
 
 .markdown-action__tooltip-actions {
@@ -4688,30 +4697,42 @@ video {
 
 .markdown-action__tooltip-btn,
 .markdown-action__tooltip-link {
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-pill);
   font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
   text-decoration: none;
   cursor: pointer;
   border: 1px solid transparent;
+  line-height: 1;
+  white-space: nowrap;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
 }
 
-.markdown-action__tooltip-btn {
+.markdown-action__tooltip-btn--primary {
   background: var(--color-accent);
   color: var(--color-on-accent);
   border-color: var(--color-accent);
+  flex: 1;
 }
 
-.markdown-action__tooltip-btn:hover {
+.markdown-action__tooltip-btn--primary:hover {
   background: var(--color-accent-hover);
   border-color: var(--color-accent-hover);
 }
 
 .markdown-action__tooltip-link {
-  background: var(--color-surface-subtle);
+  background: var(--color-surface);
   color: var(--color-text);
   border-color: var(--color-border);
+  flex: 1;
 }
 
 .markdown-action__tooltip-link:hover {

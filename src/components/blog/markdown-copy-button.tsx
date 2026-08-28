@@ -135,18 +135,30 @@ export function MarkdownCopyButton({
         hidden={!tooltipOpen && !copied && !error}
         aria-hidden={!tooltipOpen && !copied && !error ? "true" : undefined}
       >
-        <p className="markdown-action__tooltip-title">{messages.markdownTooltip}</p>
+        <div className="markdown-action__tooltip-head">
+          <svg aria-hidden="true" fill="none" height="14" viewBox="0 0 24 24" width="14">
+            <path
+              d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinejoin="round"
+            />
+            <path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+          </svg>
+          <p className="markdown-action__tooltip-title">{messages.markdownTooltip}</p>
+        </div>
         <div className="markdown-action__tooltip-actions">
           <button
-            className="markdown-action__tooltip-btn"
+            className="markdown-action__tooltip-btn markdown-action__tooltip-btn--primary"
             onClick={handleCopy}
             type="button"
           >
+            <svg aria-hidden="true" fill="none" height="14" viewBox="0 0 24 24" width="14">
+              <rect x="9" y="9" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M14 9V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h2" stroke="currentColor" strokeWidth="1.6" />
+            </svg>
             {messages.markdownCopyLabel}
           </button>
-          <span aria-hidden="true" className="markdown-action__dot">
-            ·
-          </span>
           <Link
             className="markdown-action__tooltip-link"
             href={mdHref}
@@ -155,6 +167,10 @@ export function MarkdownCopyButton({
             onClick={() => setTooltipOpen(false)}
           >
             {messages.markdownViewLabel}
+            <svg aria-hidden="true" fill="none" height="12" viewBox="0 0 24 24" width="12">
+              <path d="M11 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+              <path d="M14 5h5v5M10 14L19 5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </Link>
         </div>
       </div>
