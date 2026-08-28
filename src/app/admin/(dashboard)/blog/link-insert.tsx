@@ -92,13 +92,7 @@ export function LinkInsertButton({
         onClose={resetAndClose}
         ref={dialogRef}
       >
-        <form
-          className="admin-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            handleInsert();
-          }}
-        >
+        <div className="admin-form">
           <h3 className="admin-dialog__title">Insert link</h3>
           <p className="admin-note">
             Add a URL and link text. It will be inserted as <code>[text](url)</code> in Markdown.
@@ -111,6 +105,12 @@ export function LinkInsertButton({
               placeholder="https://example.com or /blog/my-post"
               value={url}
               onChange={(event) => setUrl(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  handleInsert();
+                }
+              }}
               required
             />
           </label>
@@ -121,6 +121,12 @@ export function LinkInsertButton({
               placeholder="Display text (defaults to URL)"
               value={text}
               onChange={(event) => setText(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  handleInsert();
+                }
+              }}
             />
           </label>
           {error ? (
@@ -129,12 +135,14 @@ export function LinkInsertButton({
             </p>
           ) : null}
           <div className="admin-form-actions">
-            <button type="submit">Insert</button>
+            <button type="button" onClick={handleInsert}>
+              Insert
+            </button>
             <button type="button" onClick={resetAndClose}>
               Cancel
             </button>
           </div>
-        </form>
+        </div>
       </dialog>
     </>
   );
