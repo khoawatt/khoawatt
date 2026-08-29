@@ -1323,6 +1323,12 @@ video {
   margin-block-start: var(--space-10);
 }
 
+.resume-sidebar {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+}
+
 .resume-lock {
   display: flex;
   flex-direction: column;
@@ -2800,12 +2806,18 @@ video {
     gap: var(--space-8);
   }
 
-  .resume-categories {
+  .resume-sidebar {
     position: sticky;
     top: calc(var(--header-scroll-offset) + var(--space-3));
     display: grid;
     flex: none;
     width: 16rem;
+    align-content: start;
+    gap: var(--space-4);
+  }
+
+  .resume-categories {
+    display: grid;
     align-content: start;
     overflow: visible;
     padding: var(--space-1);
