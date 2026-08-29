@@ -4,11 +4,11 @@ import { SiteHeader } from "@/components/navigation/site-header";
 import { StructuredData } from "@/components/seo/structured-data";
 import { FooterSection } from "@/components/sections/footer/footer-section";
 import { getFooterContent } from "@/content/footer";
-import { portfolioProfile } from "@/content/profile";
 import { locales } from "@/features/i18n/config";
 import { getMessages } from "@/features/i18n/messages";
 import { getLocaleFromParams } from "@/features/i18n/server";
 import { getLocalizedPathname } from "@/features/i18n/routing";
+import { getGithubUrl } from "@/features/cms/repository";
 import { ThemeProvider } from "@/features/theme/theme-provider";
 import { ThemeScript } from "@/features/theme/theme-script";
 
@@ -30,6 +30,7 @@ export default async function LocaleLayout({
   const locale = await getLocaleFromParams(params);
   const messages = await getMessages(locale);
   const footerContent = getFooterContent(locale);
+  const githubUrl = await getGithubUrl();
 
   return (
     <html data-theme="light" lang={locale} suppressHydrationWarning>
@@ -47,7 +48,7 @@ export default async function LocaleLayout({
         <StructuredData locale={locale} />
         <ThemeProvider>
           <SiteHeader
-            githubUrl={portfolioProfile.githubUrl}
+            githubUrl={githubUrl}
             locale={locale}
             localeSwitcherMessages={messages.localeSwitcher}
             messages={messages.header}

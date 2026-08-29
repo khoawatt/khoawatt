@@ -118,6 +118,47 @@ export async function getPortfolioProfile(
   }
 }
 
+/**
+ * Single source of truth for the header GitHub icon.
+ * Priority: `social_links` (icon_key='github') > `profile.github_url` > static fallback.
+ * This eliminates the previous duplication where `admin/profile` and `admin/social`
+ * both managed a GitHub URL and `SiteHeader` was wired to the static import.
+ */
+export async function getGithubUrl(): Promise<string> {
+  const fallback = getLocalProfile("en").githubUrl;
+
+  if (!hasCmsConfig()) return fallback;
+
+  const client = getServiceClient();
+  if (!client) return fallback;
+
+  try {
+    const { data: socialRow } = await client
+      .from("social_links")
+      .select("url")
+      .eq("icon_key", "github")
+      .order("order")
+      .limit(1)
+      .maybeSingle();
+
+    const socialUrl = (socialRow as { url?: string | null } | null)?.url;
+    if (socialUrl && socialUrl.startsWith("https://")) return socialUrl;
+
+    const { data: profileRow } = await client
+      .from("profile")
+      .select("github_url")
+      .maybeSingle();
+
+    const profileUrl = (profileRow as { github_url?: string | null } | null)
+      ?.github_url;
+    if (profileUrl && profileUrl.startsWith("https://")) return profileUrl;
+
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export async function getSkillsContent(
   locale: Locale,
 ): Promise<SkillsContentView> {
