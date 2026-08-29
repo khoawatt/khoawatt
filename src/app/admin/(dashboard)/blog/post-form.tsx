@@ -411,8 +411,10 @@ export function PostForm({
                   />
                   {fieldErrors.summaryEn ? <small className="admin-error">{fieldErrors.summaryEn}</small> : null}
                 </label>
-                <label className="admin-field">
-                  <span>Markdown content (EN)</span>
+                <div className="admin-field">
+                  <label className="admin-field__label" htmlFor="content-md-en">
+                    Markdown content (EN)
+                  </label>
                   <div className="admin-markdown-toolbar">
                     <MediaInsertButton
                       onInsert={(image) => insertMarkdownImage("en", image)}
@@ -436,6 +438,7 @@ export function PostForm({
                   </div>
                   <textarea
                     className="admin-markdown"
+                    id="content-md-en"
                     onChange={(event) => setContentMdEn(event.target.value)}
                     ref={enContentRef}
                     rows={16}
@@ -445,7 +448,7 @@ export function PostForm({
                     Start the body with `##` headings — the title above is the single H1 of the
                     page, and a leading `#` line is dropped when rendering.
                   </small>
-                </label>
+                </div>
               </>
             ) : (
               <>
@@ -468,8 +471,10 @@ export function PostForm({
                   />
                   {fieldErrors.summaryVi ? <small className="admin-error">{fieldErrors.summaryVi}</small> : null}
                 </label>
-                <label className="admin-field">
-                  <span>Markdown content (VI)</span>
+                <div className="admin-field">
+                  <label className="admin-field__label" htmlFor="content-md-vi">
+                    Markdown content (VI)
+                  </label>
                   <div className="admin-markdown-toolbar">
                     <MediaInsertButton
                       onInsert={(image) => insertMarkdownImage("vi", image)}
@@ -493,6 +498,7 @@ export function PostForm({
                   </div>
                   <textarea
                     className="admin-markdown"
+                    id="content-md-vi"
                     onChange={(event) => setContentMdVi(event.target.value)}
                     ref={viContentRef}
                     rows={16}
@@ -502,7 +508,7 @@ export function PostForm({
                     Start the body with `##` headings — the title above is the single H1 of the
                     page, and a leading `#` line is dropped when rendering.
                   </small>
-                </label>
+                </div>
               </>
             )}
           </div>

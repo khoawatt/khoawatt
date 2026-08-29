@@ -3081,7 +3081,8 @@ video {
   gap: 0.375rem;
 }
 
-.admin-field span {
+.admin-field span,
+.admin-field__label {
   font-size: 0.875rem;
   font-weight: 500;
 }
