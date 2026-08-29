@@ -19,6 +19,7 @@ export function ProfileForm({ initial }: ProfileFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isDeleting, startDelete] = useTransition();
+  const [localeTab, setLocaleTab] = useState<"en" | "vi">("en");
 
   function handleDelete() {
     if (
@@ -71,66 +72,91 @@ export function ProfileForm({ initial }: ProfileFormProps) {
 
   return (
     <form className="admin-form" onSubmit={onSubmit}>
-      <label className="admin-field">
-        <span>Name</span>
-        <input name="name" required defaultValue={initial.name} />
-      </label>
-      <label className="admin-field">
-        <span>Short name</span>
-        <input name="shortName" defaultValue={initial.shortName} />
-      </label>
+      <div className="blog-post-editor">
+        <div className="blog-post-editor__side">
+          <label className="admin-field">
+            <span>Name</span>
+            <input name="name" required defaultValue={initial.name} />
+          </label>
+          <label className="admin-field">
+            <span>Short name</span>
+            <input name="shortName" defaultValue={initial.shortName} />
+          </label>
+          <h3>Links</h3>
+          <label className="admin-field">
+            <span>GitHub URL</span>
+            <input name="githubUrl" defaultValue={initial.githubUrl ?? ""} />
+          </label>
+          <label className="admin-field">
+            <span>LinkedIn URL</span>
+            <input name="linkedinUrl" defaultValue={initial.linkedinUrl ?? ""} />
+          </label>
+          <label className="admin-field">
+            <span>Resume URL</span>
+            <input name="resumeUrl" defaultValue={initial.resumeUrl ?? ""} />
+          </label>
+          <label className="admin-field">
+            <span>Email</span>
+            <input name="email" type="email" defaultValue={initial.email ?? ""} />
+          </label>
+          <label className="admin-field">
+            <span>Phone</span>
+            <input name="phone" defaultValue={initial.phone ?? ""} />
+          </label>
+        </div>
 
-      <h3>Links</h3>
-      <label className="admin-field">
-        <span>GitHub URL</span>
-        <input name="githubUrl" defaultValue={initial.githubUrl ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>LinkedIn URL</span>
-        <input name="linkedinUrl" defaultValue={initial.linkedinUrl ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Resume URL</span>
-        <input name="resumeUrl" defaultValue={initial.resumeUrl ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Email</span>
-        <input name="email" type="email" defaultValue={initial.email ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Phone</span>
-        <input name="phone" defaultValue={initial.phone ?? ""} />
-      </label>
+        <div className="blog-post-editor__main">
+          <div className="admin-locale-tabs" role="tablist" aria-label="Profile language">
+            <button
+              aria-selected={localeTab === "en"}
+              onClick={() => setLocaleTab("en")}
+              role="tab"
+              type="button"
+            >
+              English
+            </button>
+            <button
+              aria-selected={localeTab === "vi"}
+              onClick={() => setLocaleTab("vi")}
+              role="tab"
+              type="button"
+            >
+              Tiếng Việt
+            </button>
+          </div>
 
-      <h3>Role</h3>
-      <label className="admin-field">
-        <span>Role (EN)</span>
-        <input name="roleEn" required defaultValue={initial.roleEn} />
-      </label>
-      <label className="admin-field">
-        <span>Role (VI)</span>
-        <input name="roleVi" required defaultValue={initial.roleVi} />
-      </label>
-
-      <h3>About intro</h3>
-      <label className="admin-field">
-        <span>Intro (EN)</span>
-        <textarea name="introEn" required rows={4} defaultValue={initial.introEn} />
-      </label>
-      <label className="admin-field">
-        <span>Intro (VI)</span>
-        <textarea name="introVi" required rows={4} defaultValue={initial.introVi} />
-      </label>
-
-      <h3>Location</h3>
-      <label className="admin-field">
-        <span>Location (EN)</span>
-        <input name="locationEn" defaultValue={initial.locationEn ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Location (VI)</span>
-        <input name="locationVi" defaultValue={initial.locationVi ?? ""} />
-      </label>
+          <div role="tabpanel">
+            <div hidden={localeTab !== "en"}>
+              <label className="admin-field">
+                <span>Role (EN)</span>
+                <input name="roleEn" defaultValue={initial.roleEn} />
+              </label>
+              <label className="admin-field">
+                <span>Intro (EN)</span>
+                <textarea name="introEn" rows={4} defaultValue={initial.introEn} />
+              </label>
+              <label className="admin-field">
+                <span>Location (EN)</span>
+                <input name="locationEn" defaultValue={initial.locationEn ?? ""} />
+              </label>
+            </div>
+            <div hidden={localeTab !== "vi"}>
+              <label className="admin-field">
+                <span>Role (VI)</span>
+                <input name="roleVi" defaultValue={initial.roleVi} />
+              </label>
+              <label className="admin-field">
+                <span>Intro (VI)</span>
+                <textarea name="introVi" rows={4} defaultValue={initial.introVi} />
+              </label>
+              <label className="admin-field">
+                <span>Location (VI)</span>
+                <input name="locationVi" defaultValue={initial.locationVi ?? ""} />
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {error ? (
         <p className="admin-error" role="alert">

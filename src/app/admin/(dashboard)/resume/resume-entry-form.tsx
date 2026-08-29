@@ -20,6 +20,7 @@ export function ResumeEntryForm({ existing, categories }: ResumeEntryFormProps) 
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [localeTab, setLocaleTab] = useState<"en" | "vi">("en");
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -67,111 +68,128 @@ export function ResumeEntryForm({ existing, categories }: ResumeEntryFormProps) 
 
   return (
     <form className="admin-form" onSubmit={onSubmit}>
-      {!existing ? (
-        <label className="admin-field">
-          <span>ID (slug, optional)</span>
-          <input name="id" defaultValue="" />
-        </label>
-      ) : null}
+      <div className="blog-post-editor">
+        <div className="blog-post-editor__side">
+          {!existing ? (
+            <label className="admin-field">
+              <span>ID (slug, optional)</span>
+              <input name="id" defaultValue="" />
+            </label>
+          ) : null}
+          <label className="admin-field">
+            <span>Category</span>
+            <select name="categoryId" required defaultValue={existing?.categoryId ?? ""}>
+              <option value="">Select…</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.nameEn}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="admin-field">
+            <span>Start date</span>
+            <input name="startDate" type="date" defaultValue={existing?.startDate ?? ""} />
+          </label>
+          <label className="admin-field">
+            <span>End date</span>
+            <input name="endDate" type="date" defaultValue={existing?.endDate ?? ""} />
+          </label>
+          <label className="admin-field">
+            <span>Order</span>
+            <input name="order" type="number" defaultValue={existing?.order ?? 0} />
+          </label>
+          <label className="admin-check">
+            <input name="draft" type="checkbox" defaultChecked={existing?.draft} />
+            <span>Draft (hidden from public)</span>
+          </label>
+          <h3>Tags (comma-separated)</h3>
+          <label className="admin-field">
+            <span>Tags (EN)</span>
+            <input name="tagsEn" defaultValue={existing?.tagsEn.join(", ") ?? ""} />
+          </label>
+          <label className="admin-field">
+            <span>Tags (VI)</span>
+            <input name="tagsVi" defaultValue={existing?.tagsVi.join(", ") ?? ""} />
+          </label>
+        </div>
 
-      <label className="admin-field">
-        <span>Category</span>
-        <select name="categoryId" required defaultValue={existing?.categoryId ?? ""}>
-          <option value="">Select…</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.nameEn}
-            </option>
-          ))}
-        </select>
-      </label>
+        <div className="blog-post-editor__main">
+          <div className="admin-locale-tabs" role="tablist" aria-label="Resume entry language">
+            <button
+              aria-selected={localeTab === "en"}
+              onClick={() => setLocaleTab("en")}
+              role="tab"
+              type="button"
+            >
+              English
+            </button>
+            <button
+              aria-selected={localeTab === "vi"}
+              onClick={() => setLocaleTab("vi")}
+              role="tab"
+              type="button"
+            >
+              Tiếng Việt
+            </button>
+          </div>
 
-      <h3>Title</h3>
-      <label className="admin-field">
-        <span>Title (EN)</span>
-        <input name="titleEn" required defaultValue={existing?.titleEn ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Title (VI)</span>
-        <input name="titleVi" required defaultValue={existing?.titleVi ?? ""} />
-      </label>
-
-      <h3>Organization</h3>
-      <label className="admin-field">
-        <span>Organization (EN)</span>
-        <input name="organizationEn" defaultValue={existing?.organizationEn ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Organization (VI)</span>
-        <input name="organizationVi" defaultValue={existing?.organizationVi ?? ""} />
-      </label>
-
-      <h3>Location</h3>
-      <label className="admin-field">
-        <span>Location (EN)</span>
-        <input name="locationEn" defaultValue={existing?.locationEn ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Location (VI)</span>
-        <input name="locationVi" defaultValue={existing?.locationVi ?? ""} />
-      </label>
-
-      <h3>Date</h3>
-      <label className="admin-field">
-        <span>Start date</span>
-        <input name="startDate" type="date" defaultValue={existing?.startDate ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>End date</span>
-        <input name="endDate" type="date" defaultValue={existing?.endDate ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Date label (EN)</span>
-        <input name="dateLabelEn" defaultValue={existing?.dateLabelEn ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Date label (VI)</span>
-        <input name="dateLabelVi" defaultValue={existing?.dateLabelVi ?? ""} />
-      </label>
-
-      <h3>Summary</h3>
-      <label className="admin-field">
-        <span>Summary (EN)</span>
-        <textarea name="summaryEn" rows={3} defaultValue={existing?.summaryEn ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Summary (VI)</span>
-        <textarea name="summaryVi" rows={3} defaultValue={existing?.summaryVi ?? ""} />
-      </label>
-
-      <h3>Highlights (one per line)</h3>
-      <label className="admin-field">
-        <span>Highlights (EN)</span>
-        <textarea name="highlightsEn" rows={4} defaultValue={existing?.highlightsEn.join("\n") ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Highlights (VI)</span>
-        <textarea name="highlightsVi" rows={4} defaultValue={existing?.highlightsVi.join("\n") ?? ""} />
-      </label>
-
-      <h3>Tags (comma-separated)</h3>
-      <label className="admin-field">
-        <span>Tags (EN)</span>
-        <input name="tagsEn" defaultValue={existing?.tagsEn.join(", ") ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Tags (VI)</span>
-        <input name="tagsVi" defaultValue={existing?.tagsVi.join(", ") ?? ""} />
-      </label>
-
-      <label className="admin-field">
-        <span>Order</span>
-        <input name="order" type="number" defaultValue={existing?.order ?? 0} />
-      </label>
-      <label className="admin-check">
-        <input name="draft" type="checkbox" defaultChecked={existing?.draft} />
-        <span>Draft (hidden from public)</span>
-      </label>
+          <div role="tabpanel">
+            <div hidden={localeTab !== "en"}>
+              <label className="admin-field">
+                <span>Title (EN)</span>
+                <input name="titleEn" defaultValue={existing?.titleEn ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Organization (EN)</span>
+                <input name="organizationEn" defaultValue={existing?.organizationEn ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Location (EN)</span>
+                <input name="locationEn" defaultValue={existing?.locationEn ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Date label (EN)</span>
+                <input name="dateLabelEn" defaultValue={existing?.dateLabelEn ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Summary (EN)</span>
+                <textarea name="summaryEn" rows={3} defaultValue={existing?.summaryEn ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Highlights (EN)</span>
+                <textarea name="highlightsEn" rows={4} defaultValue={existing?.highlightsEn.join("\n") ?? ""} />
+              </label>
+            </div>
+            <div hidden={localeTab !== "vi"}>
+              <label className="admin-field">
+                <span>Title (VI)</span>
+                <input name="titleVi" defaultValue={existing?.titleVi ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Organization (VI)</span>
+                <input name="organizationVi" defaultValue={existing?.organizationVi ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Location (VI)</span>
+                <input name="locationVi" defaultValue={existing?.locationVi ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Date label (VI)</span>
+                <input name="dateLabelVi" defaultValue={existing?.dateLabelVi ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Summary (VI)</span>
+                <textarea name="summaryVi" rows={3} defaultValue={existing?.summaryVi ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Highlights (VI)</span>
+                <textarea name="highlightsVi" rows={4} defaultValue={existing?.highlightsVi.join("\n") ?? ""} />
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {error ? (
         <p className="admin-error" role="alert">
