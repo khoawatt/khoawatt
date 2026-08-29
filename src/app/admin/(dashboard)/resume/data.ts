@@ -29,6 +29,9 @@ export interface AdminResumeEntry {
   highlightsVi: string[];
   tagsEn: string[];
   tagsVi: string[];
+  linkHref: string | null;
+  linkLabelEn: string | null;
+  linkLabelVi: string | null;
 }
 
 interface CategoryRow {
@@ -54,6 +57,7 @@ interface EntryRow {
     summary: string | null;
     highlights: string[] | string;
     tags: string[] | string;
+    links: Array<{ label: string; href: string }> | string;
   }>;
 }
 
@@ -81,13 +85,37 @@ export async function listResumeCategories(): Promise<AdminResumeCategory[]> {
   });
 }
 
+function parseLinks(value: unknown): Array<{ label: string; href: string }> {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (item && typeof item === "object" && "href" in item) {
+          const href = String((item as { href: unknown }).href ?? "");
+          const label = String((item as { label: unknown }).label ?? href);
+          if (href) return { label, href };
+        }
+        return null;
+      })
+      .filter(Boolean) as Array<{ label: string; href: string }>;
+  }
+  if (typeof value === "string" && value.length > 0) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parseLinks(parsed);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 export async function listResumeEntries(): Promise<AdminResumeEntry[]> {
   const client = await getServerClient();
 
   const { data, error } = await client
     .from("resume_entries")
     .select(
-      "id, category_id, start_date, end_date, order, draft, resume_entry_translations(locale, title, organization, location, date_label, summary, highlights, tags)",
+      "id, category_id, start_date, end_date, order, draft, resume_entry_translations(locale, title, organization, location, date_label, summary, highlights, tags, links)",
     )
     .order("order")
     .order("id");
@@ -97,6 +125,9 @@ export async function listResumeEntries(): Promise<AdminResumeEntry[]> {
   return data.map((row: EntryRow) => {
     const en = row.resume_entry_translations.find((t) => t.locale === "en");
     const vi = row.resume_entry_translations.find((t) => t.locale === "vi");
+    const enLinks = parseLinks(en?.links);
+    const viLinks = parseLinks(vi?.links);
+    const primaryHref = enLinks[0]?.href ?? viLinks[0]?.href ?? null;
     return {
       id: row.id,
       categoryId: row.category_id,
@@ -118,6 +149,9 @@ export async function listResumeEntries(): Promise<AdminResumeEntry[]> {
       highlightsVi: parseStringArray(vi?.highlights),
       tagsEn: parseStringArray(en?.tags),
       tagsVi: parseStringArray(vi?.tags),
+      linkHref: primaryHref,
+      linkLabelEn: enLinks[0]?.label ?? null,
+      linkLabelVi: viLinks[0]?.label ?? null,
     };
   });
 }

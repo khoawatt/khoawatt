@@ -47,6 +47,9 @@ export function ResumeEntryForm({ existing, categories }: ResumeEntryFormProps) 
       highlightsVi: String(fd.get("highlightsVi") ?? ""),
       tagsEn: String(fd.get("tagsEn") ?? ""),
       tagsVi: String(fd.get("tagsVi") ?? ""),
+      linkHref: String(fd.get("linkHref") ?? ""),
+      linkLabelEn: String(fd.get("linkLabelEn") ?? ""),
+      linkLabelVi: String(fd.get("linkLabelVi") ?? ""),
     };
 
     startTransition(async () => {
@@ -112,6 +115,11 @@ export function ResumeEntryForm({ existing, categories }: ResumeEntryFormProps) 
             <span>Tags (VI)</span>
             <input name="tagsVi" defaultValue={existing?.tagsVi.join(", ") ?? ""} />
           </label>
+          <h3>Certificate link (optional)</h3>
+          <label className="admin-field">
+            <span>Link URL (https://)</span>
+            <input name="linkHref" defaultValue={existing?.linkHref ?? ""} placeholder="https://example.com/certificate" />
+          </label>
         </div>
 
         <div className="blog-post-editor__main">
@@ -160,6 +168,10 @@ export function ResumeEntryForm({ existing, categories }: ResumeEntryFormProps) 
                 <span>Highlights (EN)</span>
                 <textarea name="highlightsEn" rows={4} defaultValue={existing?.highlightsEn.join("\n") ?? ""} />
               </label>
+              <label className="admin-field">
+                <span>Certificate link label (EN)</span>
+                <input name="linkLabelEn" defaultValue={existing?.linkLabelEn ?? ""} placeholder="View certificate" />
+              </label>
             </div>
             <div hidden={localeTab !== "vi"}>
               <label className="admin-field">
@@ -185,6 +197,10 @@ export function ResumeEntryForm({ existing, categories }: ResumeEntryFormProps) 
               <label className="admin-field">
                 <span>Highlights (VI)</span>
                 <textarea name="highlightsVi" rows={4} defaultValue={existing?.highlightsVi.join("\n") ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Certificate link label (VI)</span>
+                <input name="linkLabelVi" defaultValue={existing?.linkLabelVi ?? ""} placeholder="Xem chứng chỉ" />
               </label>
             </div>
           </div>
