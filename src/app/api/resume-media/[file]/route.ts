@@ -19,6 +19,8 @@ const approvedMediaFiles = [
   "transcript-thumb.jpg",
   "englishwing-employment.jpg",
   "englishwing-employment-thumb.jpg",
+  "codeforces.jpg",
+  "codeforces-thumb.jpg",
 ] as const;
 
 const DENIED_RESPONSE_HEADERS: Readonly<Record<string, string>> = {

@@ -489,6 +489,30 @@ function parseStringArray(value: unknown): string[] {
   return [];
 }
 
+function parseResumeLinks(value: unknown): Array<{ label: string; href: string }> {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (item && typeof item === "object" && "href" in item) {
+          const href = String((item as { href: unknown }).href ?? "");
+          const label = String((item as { label: unknown }).label ?? href);
+          if (href) return { label, href };
+        }
+        return null;
+      })
+      .filter(Boolean) as Array<{ label: string; href: string }>;
+  }
+  if (typeof value === "string" && value.length > 0) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parseResumeLinks(parsed);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 function orUndefined(value: string | null | undefined): string | undefined {
   return value == null ? undefined : value;
 }
@@ -610,6 +634,7 @@ interface ResumeEntryRow {
     summary: string | null;
     highlights: string[] | string;
     tags: string[] | string;
+    links?: Array<{ label: string; href: string }> | string;
   }>;
   resume_media: Array<{
     id: string;
@@ -647,7 +672,7 @@ export async function getResumeContent(
       client
         .from("resume_entries")
         .select(
-          "id, category_id, order, draft, resume_entry_translations(locale, title, organization, location, date_label, summary, highlights, tags), resume_media(id, thumbnail_src, full_src, width, height, resume_media_translations(locale, alt, caption))",
+          "id, category_id, order, draft, resume_entry_translations(locale, title, organization, location, date_label, summary, highlights, tags, links), resume_media(id, thumbnail_src, full_src, width, height, resume_media_translations(locale, alt, caption))",
         )
         .eq("draft", false)
         .order("order")
@@ -658,6 +683,10 @@ export async function getResumeContent(
 
     const categories = (categoriesRes.data ?? []) as ResumeCategoryRow[];
     const entries = (entriesRes.data ?? []) as ResumeEntryRow[];
+
+    // Local DB may be empty (no backfill) — fall back to static content so the
+    // resume section still renders locally and the Codeforces fallback media shows.
+    if (categories.length === 0 || entries.length === 0) return base;
 
     const categoriesView = categories.map((category) => {
       const categoryEn = category.resume_category_translations.find(
@@ -699,6 +728,9 @@ export async function getResumeContent(
           const tags = parseStringArray(active?.tags).length
             ? parseStringArray(active?.tags)
             : parseStringArray(en?.tags);
+          const activeLinks = parseResumeLinks(active?.links);
+          const enLinks = parseResumeLinks(en?.links);
+          const links = activeLinks.length > 0 ? activeLinks : enLinks;
 
           return {
             id: entry.id,
@@ -719,6 +751,7 @@ export async function getResumeContent(
             ...(highlights.length > 0 ? { highlights } : {}),
             ...(tags.length > 0 ? { tags } : {}),
             ...(media.length > 0 ? { media } : {}),
+            ...(links.length > 0 ? { links } : {}),
           };
         }),
       };

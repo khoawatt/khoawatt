@@ -1432,21 +1432,10 @@ video {
 }
 
 .resume-category__item[aria-selected="true"] {
-  border-color: var(--color-border-strong);
-  background: var(--color-accent-soft);
-  color: var(--color-text);
-  box-shadow: var(--shadow-md);
-}
-
-.resume-category__item[aria-selected="true"]::after {
-  position: absolute;
-  right: var(--space-5);
-  bottom: var(--space-1);
-  left: var(--space-5);
-  height: 2px;
-  border-radius: var(--radius-pill);
+  border-color: var(--color-accent);
   background: var(--color-accent);
-  content: "";
+  color: var(--color-on-accent);
+  box-shadow: var(--shadow-md);
 }
 
 .resume-panel {
@@ -1480,6 +1469,15 @@ video {
   gap: var(--space-2);
 }
 
+.resume-panel__controls--below {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  margin-block: var(--space-2);
+}
+
 .resume-panel__arrow {
   display: inline-grid;
   width: 2.5rem;
@@ -1504,6 +1502,46 @@ video {
 }
 
 .resume-panel__arrow:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.resume-panel__control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition:
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    color var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.resume-panel__control:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+.resume-panel__control:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.resume-panel__control:disabled {
   cursor: default;
   opacity: 0.4;
 }
