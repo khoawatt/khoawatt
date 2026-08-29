@@ -413,7 +413,7 @@ export function PostForm({
                 </label>
                 <label className="admin-field">
                   <span>Markdown content (EN)</span>
-                  <div className="admin-form-row">
+                  <div className="admin-markdown-toolbar">
                     <MediaInsertButton
                       onInsert={(image) => insertMarkdownImage("en", image)}
                     />
@@ -422,11 +422,15 @@ export function PostForm({
                       getSelectedText={() => getSelectedText("en")}
                     />
                     <button
-                      className="admin-link-button"
+                      className="admin-link-button admin-link-button--preview"
                       disabled={isPreviewing}
                       onClick={() => runPreview("en")}
                       type="button"
                     >
+                      <svg aria-hidden="true" fill="none" height="14" viewBox="0 0 24 24" width="14">
+                        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z" stroke="currentColor" strokeWidth="1.7" />
+                        <circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="1.7" />
+                      </svg>
                       {isPreviewing ? "Rendering…" : "Preview EN"}
                     </button>
                   </div>
@@ -466,7 +470,7 @@ export function PostForm({
                 </label>
                 <label className="admin-field">
                   <span>Markdown content (VI)</span>
-                  <div className="admin-form-row">
+                  <div className="admin-markdown-toolbar">
                     <MediaInsertButton
                       onInsert={(image) => insertMarkdownImage("vi", image)}
                     />
@@ -475,11 +479,15 @@ export function PostForm({
                       getSelectedText={() => getSelectedText("vi")}
                     />
                     <button
-                      className="admin-link-button"
+                      className="admin-link-button admin-link-button--preview"
                       disabled={isPreviewing}
                       onClick={() => runPreview("vi")}
                       type="button"
                     >
+                      <svg aria-hidden="true" fill="none" height="14" viewBox="0 0 24 24" width="14">
+                        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z" stroke="currentColor" strokeWidth="1.7" />
+                        <circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="1.7" />
+                      </svg>
                       {isPreviewing ? "Rendering…" : "Preview VI"}
                     </button>
                   </div>
