@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 
-import { getResumeEntry, listResumeCategories } from "../../data";
+import { getResumeEntry, listResumeCategories, listResumeMedia } from "../../data";
 import { ResumeEntryForm } from "../../resume-entry-form";
+import { ResumeMediaManager } from "../../resume-media-manager";
 import { AdminFormCard, AdminPage } from "../../../admin-page";
 
 interface AdminEditResumeEntryPageProps {
@@ -16,9 +17,10 @@ export default async function AdminEditResumeEntryPage({
   params,
 }: AdminEditResumeEntryPageProps) {
   const { id } = await params;
-  const [entry, categories] = await Promise.all([
+  const [entry, categories, media] = await Promise.all([
     getResumeEntry(id),
     listResumeCategories(),
+    listResumeMedia(id),
   ]);
 
   if (!entry) {
@@ -30,6 +32,11 @@ export default async function AdminEditResumeEntryPage({
       <AdminFormCard className="admin-form-card--wide">
         <h2>Entry details</h2>
         <ResumeEntryForm existing={entry} categories={categories} />
+      </AdminFormCard>
+      <AdminFormCard className="admin-form-card--wide">
+        <h2>Images</h2>
+        <p className="admin-hint">Pick from Resume media library; images are served via the gated /api/resume-media route.</p>
+        <ResumeMediaManager entryId={entry.id} initialMedia={media} />
       </AdminFormCard>
     </AdminPage>
   );
