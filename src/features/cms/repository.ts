@@ -16,6 +16,10 @@ import {
   type ContactContentView,
 } from "@/content/contact";
 import {
+  getFooterContent as getLocalFooter,
+  type FooterContentView,
+} from "@/content/footer";
+import {
   getFeaturedProjects as getLocalFeaturedProjects,
   type FeaturedProjectsView,
 } from "@/content/projects";
@@ -45,10 +49,23 @@ import { hasCmsConfig } from "./config";
 interface ProfileRow {
   name: string | null;
   github_url: string | null;
+  phone: string | null;
+  email: string | null;
   profile_translations: Array<{
     locale: string;
     role: string;
     intro: string;
+    location?: string | null;
+  }>;
+}
+
+interface ContactProfileRow {
+  name?: string | null;
+  email: string | null;
+  phone: string | null;
+  profile_translations: Array<{
+    locale: string;
+    location: string | null;
   }>;
 }
 
@@ -115,6 +132,47 @@ export async function getPortfolioProfile(
     };
   } catch {
     return base;
+  }
+}
+
+/**
+ * Single source of truth for the header GitHub icon.
+ * Priority: `social_links` (icon_key='github') > `profile.github_url` > static fallback.
+ * This eliminates the previous duplication where `admin/profile` and `admin/social`
+ * both managed a GitHub URL and `SiteHeader` was wired to the static import.
+ */
+export async function getGithubUrl(): Promise<string> {
+  const fallback = getLocalProfile("en").githubUrl;
+
+  if (!hasCmsConfig()) return fallback;
+
+  const client = getServiceClient();
+  if (!client) return fallback;
+
+  try {
+    const { data: socialRow } = await client
+      .from("social_links")
+      .select("url")
+      .eq("icon_key", "github")
+      .order("order")
+      .limit(1)
+      .maybeSingle();
+
+    const socialUrl = (socialRow as { url?: string | null } | null)?.url;
+    if (socialUrl && socialUrl.startsWith("https://")) return socialUrl;
+
+    const { data: profileRow } = await client
+      .from("profile")
+      .select("github_url")
+      .maybeSingle();
+
+    const profileUrl = (profileRow as { github_url?: string | null } | null)
+      ?.github_url;
+    if (profileUrl && profileUrl.startsWith("https://")) return profileUrl;
+
+    return fallback;
+  } catch {
+    return fallback;
   }
 }
 
@@ -186,28 +244,113 @@ export async function getSkillsContent(
   }
 }
 
+function buildContactDetails(
+  baseDetails: ReadonlyArray<ContactContentView["details"][number]>,
+  profile: ContactProfileRow | null,
+  locale: Locale,
+): ReadonlyArray<ContactContentView["details"][number]> {
+  const locationText =
+    profile?.profile_translations.find((t) => t.locale === locale)?.location ??
+    profile?.profile_translations.find((t) => t.locale === "en")?.location ??
+    null;
+
+  return baseDetails.map((detail) => {
+    if (detail.id === "email" && profile?.email) {
+      const email = profile.email.trim();
+      if (email) return { ...detail, value: email, href: `mailto:${email}` };
+    }
+    if (detail.id === "phone" && profile?.phone) {
+      const phone = profile.phone.trim();
+      if (phone) {
+        const tel = phone.replaceAll(/\s+/g, "");
+        return { ...detail, value: phone, href: `tel:${tel}` };
+      }
+    }
+    if (detail.id === "location") {
+      const loc = locationText?.trim() ? locationText.trim() : detail.value;
+      if (loc) {
+        const search = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`;
+        return { ...detail, value: loc, href: search };
+      }
+    }
+    // Ensure even static fallback location becomes a maps link
+    if (detail.id === "location" && !detail.href && detail.value) {
+      const search = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detail.value)}`;
+      return { ...detail, href: search };
+    }
+    return detail;
+  });
+}
+
+function buildFooterDetails(
+  baseDetails: ReadonlyArray<FooterContentView["details"][number]>,
+  profile: ContactProfileRow | null,
+  locale: Locale,
+): ReadonlyArray<FooterContentView["details"][number]> {
+  const locationText =
+    profile?.profile_translations.find((t) => t.locale === locale)?.location ??
+    profile?.profile_translations.find((t) => t.locale === "en")?.location ??
+    null;
+
+  return baseDetails.map((detail) => {
+    if (detail.id === "email" && profile?.email) {
+      const email = profile.email.trim();
+      if (email) return { ...detail, value: email, href: `mailto:${email}` };
+    }
+    if (detail.id === "phone" && profile?.phone) {
+      const phone = profile.phone.trim();
+      if (phone) {
+        const tel = phone.replaceAll(/\s+/g, "");
+        return { ...detail, value: phone, href: `tel:${tel}` };
+      }
+    }
+    if (detail.id === "location") {
+      const loc = locationText?.trim() ? locationText.trim() : detail.value;
+      if (loc) {
+        const search = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`;
+        return { ...detail, value: loc, href: search };
+      }
+    }
+    if (detail.id === "location" && !detail.href && detail.value) {
+      const search = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detail.value)}`;
+      return { ...detail, href: search };
+    }
+    return detail;
+  });
+}
+
 export async function getContactContent(
   locale: Locale,
 ): Promise<ContactContentView> {
   const base = getLocalContact(locale);
 
   if (!hasCmsConfig()) {
-    return base;
+    // Even in local mode, ensure location has a maps link
+    return { ...base, details: buildContactDetails(base.details, null, locale) };
   }
 
   const client = getServiceClient();
-  if (!client) return base;
+  if (!client) {
+    return { ...base, details: buildContactDetails(base.details, null, locale) };
+  }
 
   try {
-    const { data, error } = await client
-      .from("social_links")
-      .select("id, label, url, icon_key, order")
-      .order("order")
-      .order("id");
+    const [socialRes, profileRes] = await Promise.all([
+      client
+        .from("social_links")
+        .select("id, label, url, icon_key, order")
+        .order("order")
+        .order("id"),
+      client
+        .from("profile")
+        .select("email, phone, profile_translations(locale, location)")
+        .maybeSingle(),
+    ]);
 
-    if (error || !data) return base;
+    const socialData = socialRes.data as SocialRow[] | null;
+    const socialError = socialRes.error;
 
-    const rows = data as SocialRow[];
+    const rows = !socialError && socialData ? (socialData as SocialRow[]) : [];
     const platformSet = new Set<string>([
       "facebook",
       "github",
@@ -230,11 +373,57 @@ export async function getContactContent(
         href: row.url,
       }));
 
+    const profileRow = (profileRes.data as ContactProfileRow | null) ?? null;
+    const details = buildContactDetails(base.details, profileRow, locale);
+
     return {
       ...base,
-      // Contact details stay owner-managed static content; only configured
-      // socials are CMS-driven. An empty table falls back to static defaults.
+      details,
       socials: cmsSocials.length > 0 ? cmsSocials : base.socials,
+    };
+  } catch {
+    return base;
+  }
+}
+
+export async function getFooterContent(
+  locale: Locale,
+): Promise<FooterContentView> {
+  const base = getLocalFooter(locale);
+
+  if (!hasCmsConfig()) {
+    return { ...base, details: buildFooterDetails(base.details, null, locale) };
+  }
+
+  const client = getServiceClient();
+  if (!client) {
+    return { ...base, details: buildFooterDetails(base.details, null, locale) };
+  }
+
+  try {
+    const { data, error } = await client
+      .from("profile")
+      .select("name, email, phone, profile_translations(locale, location)")
+      .maybeSingle();
+
+    if (error || !data) {
+      return { ...base, details: buildFooterDetails(base.details, null, locale) };
+    }
+
+    const profileRow = data as ContactProfileRow;
+    const details = buildFooterDetails(base.details, profileRow, locale);
+    const brandName =
+      profileRow.name && profileRow.name.trim().length > 0
+        ? profileRow.name.trim()
+        : base.brand.name;
+
+    return {
+      ...base,
+      brand: {
+        ...base.brand,
+        name: brandName,
+      },
+      details,
     };
   } catch {
     return base;

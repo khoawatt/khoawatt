@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
@@ -47,8 +48,10 @@ export function ProfileForm({ initial }: ProfileFormProps) {
     const data = {
       name: String(fd.get("name") ?? ""),
       shortName: String(fd.get("shortName") ?? ""),
-      githubUrl: String(fd.get("githubUrl") ?? ""),
-      linkedinUrl: String(fd.get("linkedinUrl") ?? ""),
+      // GitHub / LinkedIn are now canonical in `admin/social` (icon_key = github/linkedin).
+      // Preserve existing values so a profile save does not wipe them to null.
+      githubUrl: initial.githubUrl ?? "",
+      linkedinUrl: initial.linkedinUrl ?? "",
       resumeUrl: String(fd.get("resumeUrl") ?? ""),
       phone: String(fd.get("phone") ?? ""),
       email: String(fd.get("email") ?? ""),
@@ -83,14 +86,28 @@ export function ProfileForm({ initial }: ProfileFormProps) {
             <input name="shortName" defaultValue={initial.shortName} />
           </label>
           <h3>Links</h3>
-          <label className="admin-field">
-            <span>GitHub URL</span>
-            <input name="githubUrl" defaultValue={initial.githubUrl ?? ""} />
-          </label>
-          <label className="admin-field">
-            <span>LinkedIn URL</span>
-            <input name="linkedinUrl" defaultValue={initial.linkedinUrl ?? ""} />
-          </label>
+          <div className="admin-field">
+            <span>Social links</span>
+            <p className="admin-hint">
+              GitHub and LinkedIn are now managed at{" "}
+              <Link href="/admin/social">Admin → Socials</Link> (entries with
+              icon_key <code>github</code> / <code>linkedin</code>). The header
+              GitHub button reads from Socials first, then falls back to the
+              legacy profile URL.
+            </p>
+            {initial.githubUrl ? (
+              <small className="admin-hint">
+                Legacy profile GitHub URL: {initial.githubUrl} (kept for
+                fallback)
+              </small>
+            ) : null}
+            {initial.linkedinUrl ? (
+              <small className="admin-hint">
+                Legacy profile LinkedIn URL: {initial.linkedinUrl} (kept for
+                fallback)
+              </small>
+            ) : null}
+          </div>
           <label className="admin-field">
             <span>Resume URL</span>
             <input name="resumeUrl" defaultValue={initial.resumeUrl ?? ""} />
