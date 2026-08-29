@@ -1,19 +1,29 @@
 import Link from "next/link";
 
+import { getSettingsView } from "../settings/data";
 import { listResumeCategories, listResumeEntries } from "./data";
 import { ResumeDeleteButton } from "./resume-delete";
-import { AdminPage, AdminTable } from "../admin-page";
+import { ResumeVisibilityForm } from "./resume-visibility-form";
+import { AdminFormCard, AdminPage, AdminTable } from "../admin-page";
 
 export const metadata = {
   title: "Admin resume",
 };
 
 export default async function AdminResumePage() {
-  const categories = await listResumeCategories();
-  const entries = await listResumeEntries();
+  const [categories, entries, visibility] = await Promise.all([
+    listResumeCategories(),
+    listResumeEntries(),
+    getSettingsView(),
+  ]);
 
   return (
     <AdminPage title="Resume / CV">
+      <AdminFormCard>
+        <h2>Visibility</h2>
+        <ResumeVisibilityForm initial={visibility} />
+      </AdminFormCard>
+
       <section className="admin-section">
         <div className="admin-page-head">
           <h2>Categories</h2>
