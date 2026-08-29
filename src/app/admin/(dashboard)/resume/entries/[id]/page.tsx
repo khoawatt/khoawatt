@@ -34,8 +34,6 @@ export default async function AdminEditResumeEntryPage({
         <ResumeEntryForm existing={entry} categories={categories} />
       </AdminFormCard>
       <AdminFormCard className="admin-form-card--wide">
-        <h2>Images</h2>
-        <p className="admin-hint">Pick from Resume media library; images are served via the gated /api/resume-media route.</p>
         <ResumeMediaManager entryId={entry.id} initialMedia={media} />
       </AdminFormCard>
     </AdminPage>
