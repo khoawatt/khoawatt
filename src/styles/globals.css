@@ -1552,6 +1552,14 @@ video {
   opacity: 0.4;
 }
 
+.resume-panel__control--icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  gap: 0;
+}
+
 .resume-entry {
   display: flex;
   min-width: 0;

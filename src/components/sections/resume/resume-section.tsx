@@ -150,12 +150,12 @@ export function ResumeSection({ content }: Readonly<ResumeSectionProps>) {
             <div className="resume-panel__controls resume-panel__controls--below">
               <button
                 aria-label={content.previousEntry}
-                className="resume-panel__control"
+                className="resume-panel__control resume-panel__control--icon"
                 disabled={totalEntries <= 1}
                 onClick={() => goToEntry(activeEntry - 1)}
                 type="button"
               >
-                <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+                <svg aria-hidden="true" fill="none" height="20" viewBox="0 0 24 24" width="20">
                   <path
                     d="m14 6-6 6 6 6"
                     stroke="currentColor"
@@ -164,18 +164,16 @@ export function ResumeSection({ content }: Readonly<ResumeSectionProps>) {
                     strokeWidth="1.8"
                   />
                 </svg>
-                <span>{content.previousEntry}</span>
               </button>
 
               <button
                 aria-label={content.nextEntry}
-                className="resume-panel__control"
+                className="resume-panel__control resume-panel__control--icon"
                 disabled={totalEntries <= 1}
                 onClick={() => goToEntry(activeEntry + 1)}
                 type="button"
               >
-                <span>{content.nextEntry}</span>
-                <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+                <svg aria-hidden="true" fill="none" height="20" viewBox="0 0 24 24" width="20">
                   <path
                     d="m10 6 6 6-6 6"
                     stroke="currentColor"
