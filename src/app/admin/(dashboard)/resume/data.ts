@@ -34,6 +34,29 @@ export interface AdminResumeEntry {
   linkLabelVi: string | null;
 }
 
+export interface AdminResumeMedia {
+  id: string;
+  resumeEntryId: string;
+  thumbnailSrc: string;
+  fullSrc: string;
+  width: number | null;
+  height: number | null;
+  altEn: string;
+  altVi: string;
+  captionEn: string | null;
+  captionVi: string | null;
+}
+
+interface ResumeMediaRow {
+  id: string;
+  resume_entry_id: string;
+  thumbnail_src: string;
+  full_src: string;
+  width: number | null;
+  height: number | null;
+  resume_media_translations: Array<{ locale: string; alt: string; caption: string | null }>;
+}
+
 interface CategoryRow {
   id: string;
   slug: string;
@@ -159,6 +182,32 @@ export async function listResumeEntries(): Promise<AdminResumeEntry[]> {
 export async function getResumeEntry(id: string): Promise<AdminResumeEntry | null> {
   const rows = await listResumeEntries();
   return rows.find((row) => row.id === id) ?? null;
+}
+
+export async function listResumeMedia(entryId: string): Promise<AdminResumeMedia[]> {
+  const client = await getServerClient();
+  const { data, error } = await client
+    .from("resume_media")
+    .select("id, resume_entry_id, thumbnail_src, full_src, width, height, resume_media_translations(locale, alt, caption)")
+    .eq("resume_entry_id", entryId)
+    .order("id");
+  if (error || !data) return [];
+  return (data as ResumeMediaRow[]).map((row) => {
+    const en = row.resume_media_translations.find((t) => t.locale === "en");
+    const vi = row.resume_media_translations.find((t) => t.locale === "vi");
+    return {
+      id: row.id,
+      resumeEntryId: row.resume_entry_id,
+      thumbnailSrc: row.thumbnail_src,
+      fullSrc: row.full_src,
+      width: row.width,
+      height: row.height,
+      altEn: en?.alt ?? "",
+      altVi: vi?.alt ?? "",
+      captionEn: en?.caption ?? null,
+      captionVi: vi?.caption ?? null,
+    };
+  });
 }
 
 function parseStringArray(value: string[] | string | null | undefined): string[] {
