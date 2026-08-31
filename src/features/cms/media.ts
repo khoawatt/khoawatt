@@ -56,9 +56,22 @@ export async function findMediaReferences(
     const { data, error } = await client
       .from("project_media")
       .select("id")
+      .is("deleted_at", null)
       .or(`src.ilike.%${safePath}%`);
     if (error) throw new Error(`Reference check failed: ${error.message}`);
-    return data?.length ?? 0;
+    // also check if still present as blog cover/content (candidate) — generic safety for shared path names
+    const { data: blogData } = await client
+      .from("blog_posts")
+      .select("id")
+      .is("deleted_at", null)
+      .eq("cover_bucket_path", path)
+      .limit(1);
+    const { data: mdData } = await client
+      .from("blog_post_translations")
+      .select("post_id")
+      .ilike("content_md", `%${safePath}%`)
+      .limit(1);
+    return (data?.length ?? 0) + (blogData?.length ?? 0) + (mdData?.length ?? 0);
   }
   if (bucket === "resume-media") {
     const { data, error } = await client
@@ -67,6 +80,21 @@ export async function findMediaReferences(
       .or(`thumbnail_src.ilike.%${safePath}%,full_src.ilike.%${safePath}%`);
     if (error) throw new Error(`Reference check failed: ${error.message}`);
     return data?.length ?? 0;
+  }
+  if (bucket === "blog-media") {
+    const { data: coverData, error: coverError } = await client
+      .from("blog_posts")
+      .select("id")
+      .is("deleted_at", null)
+      .eq("cover_bucket_path", path);
+    if (coverError) throw new Error(`Reference check failed: ${coverError.message}`);
+    const { data: mdData, error: mdError } = await client
+      .from("blog_post_translations")
+      .select("post_id")
+      .ilike("content_md", `%${safePath}%`);
+    if (mdError) throw new Error(`Reference check failed: ${mdError.message}`);
+    // candidate: ilike for markdown, exact for cover — caller must parse authoritative before mutating
+    return (coverData?.length ?? 0) + (mdData?.length ?? 0);
   }
   return 0;
 }
