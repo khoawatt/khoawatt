@@ -181,5 +181,5 @@ grant execute on function public.cms_delete_profile(uuid) to authenticated, serv
 -- content when the profile row is absent. The stable slug 'owner' is seeded so the
 -- admin can create the record on first save.
 insert into public.profile (slug, github_url)
-  values ('owner', 'https://github.com/Akbi47')
+  values ('owner', 'https://github.com/khoawatt')
   on conflict (slug) do nothing;

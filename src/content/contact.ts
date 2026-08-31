@@ -99,7 +99,7 @@ const socialDefaults: ReadonlyArray<{
   {
     id: "github",
     label: { en: "GitHub", vi: "GitHub" },
-    href: "https://github.com/Akbi47",
+    href: "https://github.com/khoawatt",
   },
   {
     id: "x",
