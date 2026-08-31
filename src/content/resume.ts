@@ -426,6 +426,23 @@ export const resumeEntries = [
       { en: "Competitive programming", vi: "Lập trình thi đấu" },
       { en: "Codeforces", vi: "Codeforces" },
     ],
+    media: [
+      {
+        id: "codeforces-certificate",
+        thumbnailSrc: "/api/resume-media/codeforces-thumb.jpg",
+        fullSrc: "/api/resume-media/codeforces.jpg",
+        alt: {
+          en: "Codeforces certificate showing Expert rank for handle anhkhoaquachvo",
+          vi: "Chứng chỉ Codeforces hiển thị rank Expert cho handle anhkhoaquachvo",
+        },
+        caption: {
+          en: "Codeforces certificate — Expert",
+          vi: "Chứng chỉ Codeforces — Expert",
+        },
+        width: 1603,
+        height: 1002,
+      },
+    ],
     links: [
       {
         label: {
