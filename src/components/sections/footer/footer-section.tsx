@@ -8,6 +8,8 @@ import {
 } from "@/features/navigation/config";
 import { getLocalizedPathname } from "@/features/i18n/routing";
 
+import { LocationDirectionsLink } from "@/features/geolocation/location-directions-link";
+
 import { BackToTop } from "./back-to-top";
 import { NewsletterForm } from "./newsletter-form";
 
@@ -45,27 +47,42 @@ export function FooterSection({
               {content.brand.description}
             </p>
             <ul className="site-footer__socials">
-              {content.details.map((detail) => (
-                <li key={detail.id}>
-                  {detail.href ? (
-                    <a
-                      className="site-footer__social"
-                      href={detail.href}
-                      {...externalLinkProps(detail.href)}
-                    >
-                      <span className="site-footer__social-label">
-                        {detail.label}
+              {content.details.map((detail) => {
+                const isLocation = detail.id === "location";
+                return (
+                  <li key={detail.id}>
+                    {detail.href ? (
+                      isLocation ? (
+                        <LocationDirectionsLink
+                          className="site-footer__social"
+                          locationQuery={detail.value}
+                          searchHref={detail.href}
+                        >
+                          <span className="site-footer__social-label">
+                            {detail.label}
+                          </span>
+                        </LocationDirectionsLink>
+                      ) : (
+                        <a
+                          className="site-footer__social"
+                          href={detail.href}
+                          {...externalLinkProps(detail.href)}
+                        >
+                          <span className="site-footer__social-label">
+                            {detail.label}
+                          </span>
+                        </a>
+                      )
+                    ) : (
+                      <span className="site-footer__social">
+                        <span className="site-footer__social-label">
+                          {detail.label}
+                        </span>
                       </span>
-                    </a>
-                  ) : (
-                    <span className="site-footer__social">
-                      <span className="site-footer__social-label">
-                        {detail.label}
-                      </span>
-                    </span>
-                  )}
-                </li>
-              ))}
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
@@ -96,29 +113,45 @@ export function FooterSection({
           <div className="site-footer__column">
             <h3 className="site-footer__heading">{content.contactLabel}</h3>
             <ul className="site-footer__links">
-              {content.details.map((detail) => (
-                <li key={detail.id}>
-                  {detail.href ? (
-                    <a
-                      className="site-footer__link"
-                      href={detail.href}
-                      {...externalLinkProps(detail.href)}
-                    >
-                      <span className="site-footer__link-label">
-                        {detail.label}:
-                      </span>{" "}
-                      {detail.value}
-                    </a>
-                  ) : (
-                    <span className="site-footer__link">
-                      <span className="site-footer__link-label">
-                        {detail.label}:
-                      </span>{" "}
-                      {detail.value}
-                    </span>
-                  )}
-                </li>
-              ))}
+              {content.details.map((detail) => {
+                const isLocation = detail.id === "location";
+                return (
+                  <li key={detail.id}>
+                    {detail.href ? (
+                      isLocation ? (
+                        <LocationDirectionsLink
+                          className="site-footer__link"
+                          locationQuery={detail.value}
+                          searchHref={detail.href}
+                        >
+                          <span className="site-footer__link-label">
+                            {detail.label}:
+                          </span>{" "}
+                          {detail.value}
+                        </LocationDirectionsLink>
+                      ) : (
+                        <a
+                          className="site-footer__link"
+                          href={detail.href}
+                          {...externalLinkProps(detail.href)}
+                        >
+                          <span className="site-footer__link-label">
+                            {detail.label}:
+                          </span>{" "}
+                          {detail.value}
+                        </a>
+                      )
+                    ) : (
+                      <span className="site-footer__link">
+                        <span className="site-footer__link-label">
+                          {detail.label}:
+                        </span>{" "}
+                        {detail.value}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
 

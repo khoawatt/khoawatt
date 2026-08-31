@@ -1,6 +1,7 @@
 import { Container } from "@/components/layout/container";
 import { SectionHeading } from "@/components/ui/section-heading";
 import type { ContactContentView } from "@/content/contact";
+import { LocationDirectionsLink } from "@/features/geolocation/location-directions-link";
 
 import { ContactForm } from "./contact-form";
 import { DetailGlyphIcon, SocialGlyphIcon } from "./social-glyph-icon";
@@ -42,32 +43,45 @@ export function ContactSection({ content }: Readonly<ContactSectionProps>) {
                     className="contact-info__list"
                     aria-labelledby="contact-details-title"
                   >
-                    {content.details.map((detail) => (
-                      <li className="contact-detail" key={detail.id}>
-                        <span className="contact-detail__chip">
-                          <DetailGlyphIcon id={detail.id} />
-                        </span>
-                        <span className="contact-detail__text">
-                          <span className="contact-info__label">
-                            {detail.label}
+                    {content.details.map((detail) => {
+                      const isLocation = detail.id === "location";
+                      return (
+                        <li className="contact-detail" key={detail.id}>
+                          <span className="contact-detail__chip">
+                            <DetailGlyphIcon id={detail.id} />
                           </span>
-                          {detail.href ? (
-                            <a
-                              className="contact-detail__value"
-                              href={detail.href}
-                              rel="noopener noreferrer"
-                              target="_blank"
-                            >
-                              {detail.value}
-                            </a>
-                          ) : (
-                            <span className="contact-detail__value">
-                              {detail.value}
+                          <span className="contact-detail__text">
+                            <span className="contact-info__label">
+                              {detail.label}
                             </span>
-                          )}
-                        </span>
-                      </li>
-                    ))}
+                            {detail.href ? (
+                              isLocation ? (
+                                <LocationDirectionsLink
+                                  className="contact-detail__value"
+                                  locationQuery={detail.value}
+                                  searchHref={detail.href}
+                                >
+                                  {detail.value}
+                                </LocationDirectionsLink>
+                              ) : (
+                                <a
+                                  className="contact-detail__value"
+                                  href={detail.href}
+                                  rel="noopener noreferrer"
+                                  target="_blank"
+                                >
+                                  {detail.value}
+                                </a>
+                              )
+                            ) : (
+                              <span className="contact-detail__value">
+                                {detail.value}
+                              </span>
+                            )}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </>
               ) : null}

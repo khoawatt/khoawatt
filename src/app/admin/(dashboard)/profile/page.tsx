@@ -11,7 +11,7 @@ export default async function AdminProfilePage() {
 
   return (
     <AdminPage title="Profile">
-      <AdminFormCard>
+      <AdminFormCard className="admin-form-card--wide">
         <h2>Profile details</h2>
         <ProfileForm initial={profile} />
       </AdminFormCard>

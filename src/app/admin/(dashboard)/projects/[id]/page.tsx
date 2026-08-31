@@ -24,7 +24,7 @@ export default async function AdminEditProjectPage({
 
   return (
     <AdminPage backHref="/admin/projects" title="Edit project">
-      <AdminFormCard>
+      <AdminFormCard className="admin-form-card--wide">
         <h2>Project details</h2>
         <ProjectForm existing={project} />
       </AdminFormCard>
