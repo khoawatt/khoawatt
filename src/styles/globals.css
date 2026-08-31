@@ -3784,8 +3784,12 @@ video {
 
 /* Native dialog shell for metadata editing + the library picker modal. */
 .admin-dialog {
+  position: fixed;
+  inset: 0;
   width: min(26rem, calc(100vw - 2rem));
   max-height: min(80vh, 48rem);
+  height: fit-content;
+  margin: auto;
   padding: 1.25rem;
   border: 1px solid var(--color-border-strong);
   border-radius: 1rem;
