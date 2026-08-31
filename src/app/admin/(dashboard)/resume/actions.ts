@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getServerClient, isAdminUser } from "@/features/cms/session";
-import { required } from "@/features/cms/validation";
+import { isHttpUrl, required } from "@/features/cms/validation";
 
 export interface ResumeActionResult {
   ok: boolean;
@@ -39,6 +39,9 @@ export interface ResumeEntryFormData {
   highlightsVi: string;
   tagsEn: string;
   tagsVi: string;
+  linkHref: string;
+  linkLabelEn: string;
+  linkLabelVi: string;
 }
 
 function splitLines(value: string): string[] {
@@ -53,6 +56,17 @@ function splitTags(value: string): string[] {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function buildLinks(href: string, labelEn: string, labelVi: string): { en: unknown[]; vi: unknown[] } {
+  const cleanHref = href.trim();
+  if (!cleanHref) return { en: [], vi: [] };
+  const enLabel = labelEn.trim() || cleanHref;
+  const viLabel = labelVi.trim() || enLabel;
+  return {
+    en: [{ label: enLabel, href: cleanHref }],
+    vi: [{ label: viLabel, href: cleanHref }],
+  };
 }
 
 export async function createResumeCategory(
@@ -135,6 +149,7 @@ export async function createResumeEntry(
       ? data.id
       : `${data.categoryId}-${slugify(data.titleEn)}`;
   const client = await getServerClient();
+  const links = buildLinks(data.linkHref, data.linkLabelEn, data.linkLabelVi);
 
   const { error } = await client.rpc("cms_upsert_resume_entry", {
     p_id: id,
@@ -157,6 +172,8 @@ export async function createResumeEntry(
     p_highlights_vi: splitLines(data.highlightsVi),
     p_tags_en: splitTags(data.tagsEn),
     p_tags_vi: splitTags(data.tagsVi),
+    p_links_en: links.en,
+    p_links_vi: links.vi,
   });
   if (error) return { ok: false, error: error.message };
 
@@ -176,6 +193,7 @@ export async function updateResumeEntry(
 
   const client = await getServerClient();
 
+  const links = buildLinks(data.linkHref, data.linkLabelEn, data.linkLabelVi);
   const { error } = await client.rpc("cms_upsert_resume_entry", {
     p_id: data.id,
     p_category_id: data.categoryId,
@@ -197,6 +215,8 @@ export async function updateResumeEntry(
     p_highlights_vi: splitLines(data.highlightsVi),
     p_tags_en: splitTags(data.tagsEn),
     p_tags_vi: splitTags(data.tagsVi),
+    p_links_en: links.en,
+    p_links_vi: links.vi,
   });
   if (error) return { ok: false, error: error.message };
 
@@ -235,6 +255,9 @@ function validateEntry(data: ResumeEntryFormData): ResumeActionResult | null {
   }
   if (!required(data.titleVi)) {
     return { ok: false, fieldErrors: { titleVi: "VI title is required." } };
+  }
+  if (data.linkHref && !isHttpUrl(data.linkHref)) {
+    return { ok: false, fieldErrors: { linkHref: "Link must be http(s)." } };
   }
   return null;
 }

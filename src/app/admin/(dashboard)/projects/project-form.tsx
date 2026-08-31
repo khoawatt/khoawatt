@@ -19,6 +19,7 @@ export function ProjectForm({ existing }: ProjectFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [localeTab, setLocaleTab] = useState<"en" | "vi">("en");
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -65,102 +66,120 @@ export function ProjectForm({ existing }: ProjectFormProps) {
 
   return (
     <form className="admin-form" onSubmit={onSubmit}>
-      {!existing ? (
-        <label className="admin-field">
-          <span>ID (slug, optional)</span>
-          <input name="id" defaultValue="" />
-        </label>
-      ) : null}
+      <div className="blog-post-editor">
+        <div className="blog-post-editor__side">
+          {!existing ? (
+            <label className="admin-field">
+              <span>ID (slug, optional)</span>
+              <input name="id" defaultValue="" />
+            </label>
+          ) : null}
+          <label className="admin-field">
+            <span>Slug</span>
+            <input name="slug" required defaultValue={existing?.slug ?? ""} />
+          </label>
+          <label className="admin-field">
+            <span>Tech stack (comma-separated)</span>
+            <input name="techStack" defaultValue={existing?.techStack.join(", ") ?? ""} />
+          </label>
+          <label className="admin-field">
+            <span>Live Demo URL (http/https)</span>
+            <input name="liveDemoUrl" defaultValue={existing?.liveDemoUrl ?? ""} />
+          </label>
+          <label className="admin-field">
+            <span>Code URL (http/https)</span>
+            <input name="codeUrl" defaultValue={existing?.codeUrl ?? ""} />
+          </label>
+          <label className="admin-field">
+            <span>Order</span>
+            <input name="order" type="number" defaultValue={existing?.order ?? 0} />
+          </label>
+          <label className="admin-field">
+            <span>Status</span>
+            <select name="status" defaultValue={existing?.status ?? "active"}>
+              <option value="active">Active</option>
+              <option value="archived">Archived</option>
+              <option value="private">Private</option>
+            </select>
+          </label>
+          <label className="admin-check">
+            <input name="featured" type="checkbox" defaultChecked={existing?.featured} />
+            <span>Featured</span>
+          </label>
+          <label className="admin-check">
+            <input name="published" type="checkbox" defaultChecked={existing?.published} />
+            <span>Published</span>
+          </label>
+        </div>
 
-      <label className="admin-field">
-        <span>Slug</span>
-        <input name="slug" required defaultValue={existing?.slug ?? ""} />
-      </label>
+        <div className="blog-post-editor__main">
+          <div className="admin-locale-tabs" role="tablist" aria-label="Project language">
+            <button
+              aria-selected={localeTab === "en"}
+              onClick={() => setLocaleTab("en")}
+              role="tab"
+              type="button"
+            >
+              English
+            </button>
+            <button
+              aria-selected={localeTab === "vi"}
+              onClick={() => setLocaleTab("vi")}
+              role="tab"
+              type="button"
+            >
+              Tiếng Việt
+            </button>
+          </div>
 
-      <h3>Title</h3>
-      <label className="admin-field">
-        <span>Title (EN)</span>
-        <input name="titleEn" required defaultValue={existing?.titleEn ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Title (VI)</span>
-        <input name="titleVi" required defaultValue={existing?.titleVi ?? ""} />
-      </label>
-
-      <h3>Category</h3>
-      <label className="admin-field">
-        <span>Category (EN)</span>
-        <input name="categoryEn" required defaultValue={existing?.categoryEn ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Category (VI)</span>
-        <input name="categoryVi" required defaultValue={existing?.categoryVi ?? ""} />
-      </label>
-
-      <h3>Summary</h3>
-      <label className="admin-field">
-        <span>Summary (EN)</span>
-        <textarea name="summaryEn" required rows={3} defaultValue={existing?.summaryEn ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Summary (VI)</span>
-        <textarea name="summaryVi" required rows={3} defaultValue={existing?.summaryVi ?? ""} />
-      </label>
-
-      <h3>Description (optional)</h3>
-      <label className="admin-field">
-        <span>Description (EN)</span>
-        <textarea name="descriptionEn" rows={4} defaultValue={existing?.descriptionEn ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Description (VI)</span>
-        <textarea name="descriptionVi" rows={4} defaultValue={existing?.descriptionVi ?? ""} />
-      </label>
-
-      <h3>Highlights (one per line)</h3>
-      <label className="admin-field">
-        <span>Highlights (EN)</span>
-        <textarea name="highlightsEn" rows={4} defaultValue={existing?.highlightsEn.join("\n") ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Highlights (VI)</span>
-        <textarea name="highlightsVi" rows={4} defaultValue={existing?.highlightsVi.join("\n") ?? ""} />
-      </label>
-
-      <h3>Details</h3>
-      <label className="admin-field">
-        <span>Tech stack (comma-separated)</span>
-        <input name="techStack" defaultValue={existing?.techStack.join(", ") ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Live Demo URL (http/https)</span>
-        <input name="liveDemoUrl" defaultValue={existing?.liveDemoUrl ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Code URL (http/https)</span>
-        <input name="codeUrl" defaultValue={existing?.codeUrl ?? ""} />
-      </label>
-      <label className="admin-field">
-        <span>Order</span>
-        <input name="order" type="number" defaultValue={existing?.order ?? 0} />
-      </label>
-      <label className="admin-field">
-        <span>Status</span>
-        <select name="status" defaultValue={existing?.status ?? "active"}>
-          <option value="active">Active</option>
-          <option value="archived">Archived</option>
-          <option value="private">Private</option>
-        </select>
-      </label>
-
-      <label className="admin-check">
-        <input name="featured" type="checkbox" defaultChecked={existing?.featured} />
-        <span>Featured</span>
-      </label>
-      <label className="admin-check">
-        <input name="published" type="checkbox" defaultChecked={existing?.published} />
-        <span>Published</span>
-      </label>
+          <div role="tabpanel">
+            <div hidden={localeTab !== "en"}>
+              <label className="admin-field">
+                <span>Title (EN)</span>
+                <input name="titleEn" defaultValue={existing?.titleEn ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Category (EN)</span>
+                <input name="categoryEn" defaultValue={existing?.categoryEn ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Summary (EN)</span>
+                <textarea name="summaryEn" rows={3} defaultValue={existing?.summaryEn ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Description (EN)</span>
+                <textarea name="descriptionEn" rows={4} defaultValue={existing?.descriptionEn ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Highlights (EN)</span>
+                <textarea name="highlightsEn" rows={4} defaultValue={existing?.highlightsEn.join("\n") ?? ""} />
+              </label>
+            </div>
+            <div hidden={localeTab !== "vi"}>
+              <label className="admin-field">
+                <span>Title (VI)</span>
+                <input name="titleVi" defaultValue={existing?.titleVi ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Category (VI)</span>
+                <input name="categoryVi" defaultValue={existing?.categoryVi ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Summary (VI)</span>
+                <textarea name="summaryVi" rows={3} defaultValue={existing?.summaryVi ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Description (VI)</span>
+                <textarea name="descriptionVi" rows={4} defaultValue={existing?.descriptionVi ?? ""} />
+              </label>
+              <label className="admin-field">
+                <span>Highlights (VI)</span>
+                <textarea name="highlightsVi" rows={4} defaultValue={existing?.highlightsVi.join("\n") ?? ""} />
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {error ? (
         <p className="admin-error" role="alert">

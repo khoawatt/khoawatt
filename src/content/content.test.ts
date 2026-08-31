@@ -285,6 +285,8 @@ const approvedCertificateDerivatives = new Set([
   "transcript-thumb.jpg",
   "englishwing-employment.jpg",
   "englishwing-employment-thumb.jpg",
+  "codeforces.jpg",
+  "codeforces-thumb.jpg",
 ]);
 
 test("resume certificate media uses only the approved derivatives, gated (D4)", () => {
