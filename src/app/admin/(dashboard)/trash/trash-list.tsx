@@ -111,13 +111,63 @@ export function TrashList({ items }: { items: TrashItem[] }) {
         onCancel={() => setConfirm(null)}
       />
       {confirm?.mode === "force" ? (
-        <div className="admin-dialog__overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
-          <div className="admin-dialog" style={{ background: "white", padding: "1.5rem", borderRadius: "8px", maxWidth: "480px", width: "90%" }}>
-            <h3 className="admin-dialog__title">Force delete {confirm.entity} “{confirm.id}”?</h3>
-            <p className="admin-note">Bypass 30d retention — permanently deletes now. Type <code>DELETE</code> to confirm.</p>
-            <input aria-label="Type DELETE to confirm force" placeholder="DELETE" value={forceInput} onChange={(e) => setForceInput(e.target.value)} style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem", border: "1px solid #ccc", borderRadius: "4px" }} />
-            <div className="admin-dialog__actions" style={{ marginTop: "1rem", display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
-              <button type="button" onClick={() => { setConfirm(null); setForceInput(""); }} disabled={isPending}>Cancel</button>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Force delete ${confirm.entity} "${confirm.id}"`}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgb(0 0 0 / 0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 50,
+            padding: "1rem",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setConfirm(null);
+              setForceInput("");
+            }
+          }}
+        >
+          <div
+            className="admin-dialog"
+            style={{
+              background: "var(--color-surface)",
+              color: "var(--color-text)",
+              border: "1px solid var(--color-border-strong)",
+              width: "min(26rem, calc(100vw - 2rem))",
+              margin: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="admin-dialog__title" style={{ color: "var(--color-text)" }}>
+              Force delete {confirm.entity} “{confirm.id}”?
+            </h3>
+            <p className="admin-note" style={{ color: "var(--color-text-muted)" }}>
+              Bypass 30d retention — permanently deletes now. Type <code>DELETE</code> to confirm.
+            </p>
+            <input
+              aria-label="Type DELETE to confirm force"
+              placeholder="DELETE"
+              value={forceInput}
+              onChange={(e) => setForceInput(e.target.value)}
+              style={{
+                width: "100%",
+                marginTop: "0.5rem",
+                padding: "0.5rem 0.75rem",
+                border: "1px solid var(--color-border-strong)",
+                borderRadius: "0.5rem",
+                background: "var(--color-surface)",
+                color: "var(--color-text)",
+              }}
+            />
+            <div className="admin-dialog__actions" style={{ marginTop: "1rem" }}>
+              <button type="button" onClick={() => { setConfirm(null); setForceInput(""); }} disabled={isPending}>
+                Cancel
+              </button>
               <button type="button" className="admin-button admin-button--danger" disabled={isPending || forceInput !== "DELETE"} onClick={() => handleForceDelete(confirm.entity, confirm.id)}>
                 {isPending ? "…" : "Force delete"}
               </button>
