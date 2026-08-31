@@ -19,11 +19,14 @@ export interface SocialActionResult {
   fieldErrors?: Partial<Record<keyof SocialLinkFormData, string>>;
 }
 
+const PLATFORMS = new Set(["facebook", "github", "instagram", "linkedin", "thread", "x"]);
+
 function validate(data: SocialLinkFormData): SocialActionResult | null {
   const errors: Partial<Record<keyof SocialLinkFormData, string>> = {};
   if (!required(data.label)) errors.label = "Label is required.";
   if (!required(data.url)) errors.url = "URL is required.";
   else if (!isHttpUrl(data.url)) errors.url = "URL must be http(s).";
+  if (!data.iconKey || !PLATFORMS.has(data.iconKey)) errors.iconKey = "Unknown platform. Choose facebook, github, instagram, linkedin, thread, or x.";
   if (Object.keys(errors).length > 0) return { ok: false, fieldErrors: errors };
   return null;
 }
