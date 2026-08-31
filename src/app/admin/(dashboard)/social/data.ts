@@ -14,6 +14,7 @@ export async function listSocialLinks(): Promise<AdminSocialLink[]> {
   const { data, error } = await client
     .from("social_links")
     .select("id, label, url, icon_key, order")
+    .is("deleted_at", null)
     .order("order")
     .order("id");
 

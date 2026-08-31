@@ -47,6 +47,7 @@ export async function getProfileView(): Promise<AdminProfileView | null> {
     .select(
       "id, slug, name, short_name, github_url, linkedin_url, resume_url, phone, email, profile_translations(locale, role, intro, location)",
     )
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error || !data) return null;

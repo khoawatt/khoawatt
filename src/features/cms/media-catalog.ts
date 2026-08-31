@@ -170,7 +170,8 @@ export async function listMediaAssets(
   let request = client
     .from("media_assets")
     .select("*", params.page ? { count: "exact" } : undefined)
-    .eq("bucket", params.bucket);
+    .eq("bucket", params.bucket)
+    .is("deleted_at", null);
 
   if (params.query) {
     const safe = escapeLike(params.query.trim());

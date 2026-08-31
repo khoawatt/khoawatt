@@ -160,8 +160,12 @@ export async function deletePost(id: string): Promise<BlogActionResult> {
   const client = await withBlogClient();
   if (!client) return { ok: false, error: "Unauthorized." };
 
-  const { error } = await client.rpc("cms_delete_blog_post", { p_id: id });
+  const { data, error } = await client.rpc("cms_delete_blog_post", { p_id: id });
   if (error) return { ok: false, error: error.message };
+  if (data && typeof data === "object" && "status" in data) {
+    const res = data as { status: string; errorCode?: string; errorMessage?: string };
+    if (res.status !== "deleted") return { ok: false, error: res.errorMessage ?? res.errorCode ?? "Failed to delete." };
+  }
 
   invalidateBlog();
   revalidatePath("/admin/blog");
@@ -219,8 +223,12 @@ export async function deleteCategory(id: string): Promise<BlogActionResult> {
   const client = await withBlogClient();
   if (!client) return { ok: false, error: "Unauthorized." };
 
-  const { error } = await client.rpc("cms_delete_blog_category", { p_id: id });
+  const { data, error } = await client.rpc("cms_delete_blog_category", { p_id: id });
   if (error) return { ok: false, error: error.message };
+  if (data && typeof data === "object" && "status" in data) {
+    const res = data as { status: string; errorCode?: string; errorMessage?: string };
+    if (res.status !== "deleted") return { ok: false, error: res.errorMessage ?? res.errorCode ?? "Failed to delete." };
+  }
 
   invalidateBlog();
   revalidatePath("/admin/blog/categories");

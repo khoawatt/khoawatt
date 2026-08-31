@@ -85,6 +85,7 @@ export async function listPosts(): Promise<AdminPostRow[]> {
     .select(
       "id, slug, category_id, cover_bucket_path, status, published_at, updated_at, blog_categories(id, slug, blog_category_translations(locale, name)), blog_post_translations(locale, title, summary, content_md), blog_post_tags(tag_id)",
     )
+    .is("deleted_at", null)
     .order("published_at", { ascending: false })
     .order("updated_at", { ascending: false })
     .order("id");
@@ -138,6 +139,7 @@ export async function listCategories(): Promise<AdminCategoryRow[]> {
     .select(
       "id, slug, sort_order, blog_category_translations(locale, name)",
     )
+    .is("deleted_at", null)
     .order("sort_order")
     .order("id");
 
@@ -172,6 +174,7 @@ export async function listTags(): Promise<AdminTagRow[]> {
   const { data, error } = await client
     .from("blog_tags")
     .select("id, slug, blog_tag_translations(locale, name)")
+    .is("deleted_at", null)
     .order("id");
 
   if (error || !data) return [];

@@ -98,8 +98,14 @@ export async function deleteProfile(id: string): Promise<ProfileActionResult> {
 
   const client = await getServerClient();
 
-  const { error } = await client.rpc("cms_delete_profile", { p_id: id });
+  const { data, error } = await client.rpc("cms_delete_profile", { p_id: id });
   if (error) return { ok: false, error: error.message };
+  if (data && typeof data === "object" && "status" in data) {
+    const res = data as { status: string; errorCode?: string; errorMessage?: string };
+    if (res.status !== "deleted") {
+      return { ok: false, error: res.errorMessage ?? res.errorCode ?? "Failed to delete." };
+    }
+  }
 
   revalidatePath("/");
   revalidatePath("/vi");

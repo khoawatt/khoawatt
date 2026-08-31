@@ -177,6 +177,7 @@ async function loadPublishedPosts(
       .from("blog_posts")
       .select(postSelect(), { count: "exact" })
       .eq("status", "published")
+      .is("deleted_at", null)
       .order("published_at", { ascending: false })
       .order("id")
       .range(from, to);
@@ -216,6 +217,7 @@ async function queryRelatedPosts(
       .from("blog_posts")
       .select(`${postSelect()}, blog_post_tags(tag_id)` as string)
       .eq("status", "published")
+      .is("deleted_at", null)
       .neq("id", excludeId)
       .order("published_at", { ascending: false })
       .limit(50);
@@ -269,6 +271,7 @@ export async function queryPostBySlug(
       )
       .eq("slug", slug)
       .eq("status", "published")
+      .is("deleted_at", null)
       .maybeSingle();
     if (error || !data) return null;
 
@@ -315,6 +318,7 @@ export async function queryCategoryPage(
       .from("blog_categories")
       .select("id, slug, blog_category_translations(locale, name)")
       .eq("slug", slug)
+      .is("deleted_at", null)
       .maybeSingle();
     if (error || !data) return null;
 
@@ -351,6 +355,7 @@ async function loadPublishedPostsByTag(
       .from("blog_posts")
       .select(`${postSelect()}, blog_post_tags!inner(tag_id)`, { count: "exact" })
       .eq("status", "published")
+      .is("deleted_at", null)
       .eq("blog_post_tags.tag_id", tagId)
       .order("published_at", { ascending: false })
       .order("id")
@@ -390,6 +395,7 @@ export async function queryTagPage(
       .from("blog_tags")
       .select("id, slug, blog_tag_translations(locale, name)")
       .eq("slug", slug)
+      .is("deleted_at", null)
       .maybeSingle();
     if (error || !data) return null;
 
@@ -405,6 +411,7 @@ export async function queryTagPage(
         .from("blog_posts")
         .select("id, blog_post_tags!inner(tag_id)", { count: "exact", head: true })
         .eq("status", "published")
+        .is("deleted_at", null)
         .eq("blog_post_tags.tag_id", tag.id);
       if (!count || count === 0) return null;
     }
@@ -427,6 +434,7 @@ export async function queryPublishedPostIndex(): Promise<
       .from("blog_posts")
       .select("slug, published_at, updated_at")
       .eq("status", "published")
+      .is("deleted_at", null)
       .order("published_at", { ascending: false });
     if (error || !data) return [];
 
@@ -451,6 +459,7 @@ export async function queryCategoryIndex(): Promise<{ slug: string }[]> {
     const { data, error } = await client
       .from("blog_categories")
       .select("slug, blog_posts(id)")
+      .is("deleted_at", null)
       .eq("blog_posts.status", "published");
     if (error || !data) return [];
 
@@ -471,6 +480,7 @@ export async function queryTagIndex(): Promise<{ slug: string }[]> {
     const { data, error } = await client
       .from("blog_tags")
       .select("slug, blog_post_tags!inner(blog_posts!inner(status))")
+      .is("deleted_at", null)
       .eq("blog_post_tags.blog_posts.status", "published");
     if (error || !data) return [];
 
@@ -506,6 +516,7 @@ export async function queryCategoryNav(
       .select(
         "slug, sort_order, blog_category_translations(locale, name), blog_posts(id)",
       )
+      .is("deleted_at", null)
       .eq("blog_posts.status", "published")
       .order("sort_order")
       .order("slug");
@@ -543,6 +554,7 @@ export async function queryRssPosts(
       .from("blog_posts")
       .select(postSelect())
       .eq("status", "published")
+      .is("deleted_at", null)
       .order("published_at", { ascending: false })
       .order("id")
       .limit(limit);

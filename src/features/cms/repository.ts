@@ -94,6 +94,7 @@ export async function getPortfolioProfile(
       .select(
         "name, github_url, profile_translations(locale, role, intro)",
       )
+      .is("deleted_at", null)
       .maybeSingle();
 
     if (error || !data) return base;
@@ -136,6 +137,7 @@ export async function getSkillsContent(
       .select(
         "id, group_key, icon_key, url, order, category_key, skill_translations(locale, name, category)",
       )
+      .is("deleted_at", null)
       .order("group_key")
       .order("order")
       .order("id");
@@ -202,6 +204,7 @@ export async function getContactContent(
     const { data, error } = await client
       .from("social_links")
       .select("id, label, url, icon_key, order")
+      .is("deleted_at", null)
       .order("order")
       .order("id");
 
@@ -325,6 +328,7 @@ export async function getFeaturedProjects(
       .eq("featured", true)
       .eq("published", true)
       .eq("status", "active")
+      .is("deleted_at", null)
       .order("order")
       .order("id");
 
@@ -453,6 +457,7 @@ export async function getResumeContent(
       client
         .from("resume_categories")
         .select("id, slug, order, resume_category_translations(locale, name)")
+        .is("deleted_at", null)
         .order("order")
         .order("id"),
       client
@@ -461,6 +466,7 @@ export async function getResumeContent(
           "id, category_id, order, draft, resume_entry_translations(locale, title, organization, location, date_label, summary, highlights, tags), resume_media(id, thumbnail_src, full_src, width, height, resume_media_translations(locale, alt, caption))",
         )
         .eq("draft", false)
+        .is("deleted_at", null)
         .order("order")
         .order("id"),
     ]);

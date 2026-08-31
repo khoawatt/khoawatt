@@ -52,6 +52,7 @@ export async function listProjects(): Promise<AdminProjectRow[]> {
     .select(
       "id, slug, tech_stack, live_demo_url, code_url, featured, order, status, published, project_translations(locale, title, category, summary, description, highlights)",
     )
+    .is("deleted_at", null)
     .order("featured", { ascending: false })
     .order("order")
     .order("id");

@@ -63,6 +63,7 @@ export async function listResumeCategories(): Promise<AdminResumeCategory[]> {
   const { data, error } = await client
     .from("resume_categories")
     .select("id, slug, order, resume_category_translations(locale, name)")
+    .is("deleted_at", null)
     .order("order")
     .order("id");
 
@@ -89,6 +90,7 @@ export async function listResumeEntries(): Promise<AdminResumeEntry[]> {
     .select(
       "id, category_id, start_date, end_date, order, draft, resume_entry_translations(locale, title, organization, location, date_label, summary, highlights, tags)",
     )
+    .is("deleted_at", null)
     .order("order")
     .order("id");
 

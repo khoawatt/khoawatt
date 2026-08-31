@@ -81,8 +81,12 @@ export async function deleteSocialLink(id: string): Promise<SocialActionResult> 
   if (!(await isAdminUser())) return { ok: false, error: "Unauthorized." };
   const client = await getServerClient();
 
-  const { error } = await client.rpc("cms_delete_social", { p_id: id });
+  const { data, error } = await client.rpc("cms_delete_social", { p_id: id });
   if (error) return { ok: false, error: error.message };
+  if (data && typeof data === "object" && "status" in data) {
+    const res = data as { status: string; errorCode?: string; errorMessage?: string };
+    if (res.status !== "deleted") return { ok: false, error: res.errorMessage ?? res.errorCode ?? "Failed to delete." };
+  }
 
   revalidatePath("/");
   revalidatePath("/vi");
