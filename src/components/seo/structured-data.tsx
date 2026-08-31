@@ -3,6 +3,7 @@ import type { Locale } from "@/features/i18n/config";
 import { getMessages } from "@/features/i18n/messages";
 import { getLocalizedPathname } from "@/features/i18n/routing";
 import { getAbsoluteUrl } from "@/features/seo/config";
+import { getContactContent as getCmsContactContent, getGithubUrl } from "@/features/cms/repository";
 
 interface StructuredDataProps {
   locale: Locale;
@@ -15,6 +16,19 @@ export async function StructuredData({
   const profile = getPortfolioProfile(locale);
   const url = getAbsoluteUrl(getLocalizedPathname("/", locale));
 
+  // Social sameAs from DB (https only) + githubUrl, with fallback to local defaults
+  let sameAs: string[] = [profile.githubUrl];
+  try {
+    const contact = await getCmsContactContent(locale);
+    const socialUrls = contact.socials.map((s) => s.href).filter((href) => href.startsWith("https://"));
+    // Also fetch githubUrl from DB (social_links priority) if available
+    const githubUrl = await getGithubUrl();
+    const allUrls = new Set<string>([githubUrl, ...socialUrls].filter((u) => u.startsWith("https://")));
+    sameAs = Array.from(allUrls);
+  } catch {
+    // fallback to profile.githubUrl
+  }
+
   const graph = {
     "@context": "https://schema.org",
     "@graph": [
@@ -25,7 +39,7 @@ export async function StructuredData({
         url,
         image: getAbsoluteUrl(profile.hero.image.src),
         jobTitle: profile.role,
-        sameAs: [profile.githubUrl],
+        sameAs,
       },
       {
         "@type": "WebSite",

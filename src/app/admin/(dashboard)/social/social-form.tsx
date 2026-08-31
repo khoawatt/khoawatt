@@ -41,12 +41,14 @@ export function SocialLinkForm({ existing }: SocialLinkFormProps) {
     });
   }
 
+  const platforms = ["facebook", "github", "instagram", "linkedin", "thread", "x"] as const;
+
   return (
     <form className="admin-form" onSubmit={onSubmit}>
       {!existing ? (
         <label className="admin-field">
           <span>ID (slug, optional)</span>
-          <input name="id" defaultValue="" />
+          <input name="id" defaultValue="" placeholder="auto from label" />
         </label>
       ) : null}
 
@@ -56,11 +58,18 @@ export function SocialLinkForm({ existing }: SocialLinkFormProps) {
       </label>
       <label className="admin-field">
         <span>URL (http/https)</span>
-        <input name="url" required defaultValue={existing?.url ?? ""} />
+        <input name="url" required defaultValue={existing?.url ?? ""} placeholder="https://..." />
       </label>
       <label className="admin-field">
-        <span>Icon key</span>
-        <input name="iconKey" defaultValue={existing?.iconKey ?? ""} />
+        <span>Platform (icon)</span>
+        <select name="iconKey" defaultValue={existing?.iconKey ?? ""} required>
+          <option value="">Select platform…</option>
+          {platforms.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
       </label>
       <label className="admin-field">
         <span>Order</span>

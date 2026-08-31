@@ -47,6 +47,7 @@ export function MediaLibraryGrid({
   const [lightbox, setLightbox] = useState<MediaAsset | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MediaAsset | null>(null);
   const [deletePreview, setDeletePreview] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [, startTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -224,20 +225,78 @@ export function MediaLibraryGrid({
           `${items.length}${mode === "page" && initial.total !== undefined ? ` of ${initial.total}` : ""} image(s)`}
       </p>
 
+      {items.length > 0 ? (
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.5rem" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+            <input
+              type="checkbox"
+              checked={items.length > 0 && items.every((a) => selected.has(a.path))}
+              onChange={() => {
+                if (items.every((a) => selected.has(a.path))) setSelected(new Set());
+                else setSelected(new Set(items.map((a) => a.path)));
+              }}
+            />
+            <span className="admin-note">Select all</span>
+          </label>
+          {selected.size > 0 ? (
+            <button
+              type="button"
+              className="admin-button admin-button--danger"
+              onClick={() => {
+                if (!confirm(`Move ${selected.size} image(s) to Trash?`)) return;
+                startTransition(async () => {
+                  let deleted = 0;
+                  for (const path of Array.from(selected)) {
+                    const res = await deleteMedia(bucket, path);
+                    if (res.ok) deleted++;
+                  }
+                  setItems((current) => current.filter((item) => !selected.has(item.path)));
+                  setSelected(new Set());
+                  setStatus(`${deleted} moved to Trash`);
+                  router.refresh();
+                });
+              }}
+            >
+              Delete {selected.size} selected
+            </button>
+          ) : null}
+          {selected.size > 0 ? (
+            <button type="button" className="admin-link-button" onClick={() => setSelected(new Set())}>
+              Clear
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       {items.length === 0 ? (
         <p className="admin-message">No images match.</p>
       ) : (
         <ul className="admin-media-grid">
           {items.map((asset) => (
-            <MediaLibraryCard
-              asset={asset}
-              key={asset.path}
-              onCopy={() => copyUrl(asset)}
-              onEdit={() => setEditing(asset)}
-              onPick={onPick}
-              onRemove={removeAsset}
-              onView={() => setLightbox(asset)}
-            />
+            <li key={asset.path} style={{ position: "relative" }}>
+              <input
+                type="checkbox"
+                checked={selected.has(asset.path)}
+                onChange={() => {
+                  setSelected((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(asset.path)) next.delete(asset.path);
+                    else next.add(asset.path);
+                    return next;
+                  });
+                }}
+                aria-label={`Select ${asset.title}`}
+                style={{ position: "absolute", top: "0.5rem", left: "0.5rem", zIndex: 2 }}
+              />
+              <MediaLibraryCard
+                asset={asset}
+                onCopy={() => copyUrl(asset)}
+                onEdit={() => setEditing(asset)}
+                onPick={onPick}
+                onRemove={removeAsset}
+                onView={() => setLightbox(asset)}
+              />
+            </li>
           ))}
         </ul>
       )}
