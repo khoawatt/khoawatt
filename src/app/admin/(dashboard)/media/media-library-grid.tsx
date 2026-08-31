@@ -3,18 +3,14 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
+import { DeleteDialog } from "@/components/ui/delete-dialog";
 import type { MediaBucket } from "@/features/cms/media";
 import { publicMediaUrl } from "@/features/cms/media-url";
-import {
-  deleteMedia,
-  updateMediaDetails,
-} from "@/features/cms/media-actions";
-import type {
-  CursorQuery,
-  ListMediaAssetsResult,
-  MediaAsset,
-} from "@/features/cms/media-catalog";
+import { deleteMedia, updateMediaDetails } from "@/features/cms/media-actions";
+import type { CursorQuery, ListMediaAssetsResult, MediaAsset } from "@/features/cms/media-catalog";
 import { fetchMediaBatch } from "@/features/cms/media-library-actions";
+import { inspectDelete } from "@/features/cms/delete/actions";
+import { resolveAndDeleteMedia } from "@/features/cms/media-resolve-actions";
 
 export interface MediaLibraryGridProps {
   bucket: MediaBucket;
@@ -49,7 +45,10 @@ export function MediaLibraryGrid({
   const [status, setStatus] = useState<string | null>(null);
   const [editing, setEditing] = useState<MediaAsset | null>(null);
   const [lightbox, setLightbox] = useState<MediaAsset | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<MediaAsset | null>(null);
+  const [deletePreview, setDeletePreview] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const [isDeleting, startDeleteTransition] = useTransition();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Server renders a fresh grid instance per page/search via `key`, so local
@@ -106,6 +105,28 @@ export function MediaLibraryGrid({
     return () => clearTimeout(timer);
   }, [bucket, initialQuery, mode, query]);
 
+  useEffect(() => {
+    if (!deleteTarget) return;
+    let cancelled = false;
+    (async () => {
+      const res = await inspectDelete("media_asset", [deleteTarget.path]);
+      if (cancelled) return;
+      if (res.ok && res.result) {
+        const deps = res.result.dependencies;
+        if (deps.length > 0) {
+          const lines = deps.map((d) => `• ${d.count} reference(s) in ${d.entity} will be affected`);
+          setDeletePreview(lines.join("\n") + "\n\nResolving will: clear cover or remove embedded image nodes.");
+        } else setDeletePreview(null);
+        if (res.result.blocked.length > 0) {
+          setDeletePreview((prev) => (prev ? prev + "\n" : "") + "⚠ This file is currently referenced — Resolve & Delete will clear references.");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [deleteTarget]);
+
   function submitSearch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (mode !== "page") return;
@@ -117,17 +138,36 @@ export function MediaLibraryGrid({
   }
 
   function removeAsset(asset: MediaAsset) {
-    if (!window.confirm(`Delete "${asset.title}"? This cannot be undone.`)) return;
-    setStatus(`Deleting ${asset.path}…`);
-    startTransition(async () => {
-      const result = await deleteMedia(asset.bucket, asset.path);
+    setDeleteTarget(asset);
+  }
+
+  function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    setStatus(`Deleting ${deleteTarget.path}…`);
+    startDeleteTransition(async () => {
+      // Try direct soft delete first
+      const result = await deleteMedia(deleteTarget.bucket, deleteTarget.path);
       if (result.ok) {
-        setItems((current) => current.filter((item) => item.path !== asset.path));
+        setItems((current) => current.filter((item) => item.path !== deleteTarget.path));
         setStatus(null);
+        setDeleteTarget(null);
         router.refresh();
-      } else {
-        setStatus(result.error ?? "Delete failed.");
+        return;
       }
+      // If blocked, try resolve & delete
+      if (result.error?.includes("referenced") || result.error?.includes("blocked")) {
+        const resolveRes = await resolveAndDeleteMedia(deleteTarget.bucket, deleteTarget.path);
+        if (resolveRes.ok) {
+          setItems((current) => current.filter((item) => item.path !== deleteTarget.path));
+          setStatus(`Resolved: cleared ${resolveRes.clearedCovers ?? 0} covers, removed ${resolveRes.removedNodes ?? 0} nodes`);
+          setDeleteTarget(null);
+          router.refresh();
+          return;
+        }
+        setStatus(resolveRes.error ?? result.error ?? "Delete failed.");
+        return;
+      }
+      setStatus(result.error ?? "Delete failed.");
     });
   }
 
@@ -255,6 +295,18 @@ export function MediaLibraryGrid({
           if (lightbox) removeAsset(lightbox);
           setLightbox(null);
         }}
+      />
+
+      <DeleteDialog
+        open={!!deleteTarget}
+        title={deleteTarget ? `Move "${deleteTarget.title}" to Trash?` : "Move to Trash?"}
+        description="This file will be hidden and can be restored from Trash within 30 days. If referenced, Resolve & Delete will clear references."
+        preview={deletePreview}
+        confirmLabel={deletePreview?.includes("referenced") ? "Resolve & Delete" : "Move to Trash"}
+        variant={deletePreview?.includes("referenced") ? "critical" : "warning"}
+        isPending={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );

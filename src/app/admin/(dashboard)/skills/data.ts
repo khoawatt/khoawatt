@@ -47,6 +47,7 @@ export async function listSkills(): Promise<SkillListResult> {
   const { data, error } = await client
     .from("skills")
     .select("id, group_key, category_key, icon_key, url, order, featured, skill_translations(locale, name)")
+    .is("deleted_at", null)
     .order("group_key")
     .order("order")
     .order("id");
@@ -71,6 +72,7 @@ export async function getSkill(id: string): Promise<AdminSkillRow | null> {
     .from("skills")
     .select("id, group_key, category_key, icon_key, url, order, featured, skill_translations(locale, name)")
     .eq("id", id)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error || !data) return null;

@@ -42,7 +42,7 @@ export default async function AdminBlogCategoriesPage() {
                 <td>{category.sortOrder}</td>
                 <td className="admin-row-actions">
                   <Link href={`/admin/blog/categories/${category.id}`}>Edit</Link>
-                  <DeleteCategoryButton id={category.id} name={category.nameEn} />
+                  {category.id !== "uncategorized" ? <DeleteCategoryButton id={category.id} name={category.nameEn} /> : <span className="admin-note">protected</span>}
                 </td>
               </tr>
             ))}

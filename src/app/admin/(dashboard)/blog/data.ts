@@ -85,6 +85,7 @@ export async function listPosts(): Promise<AdminPostRow[]> {
     .select(
       "id, slug, category_id, cover_bucket_path, status, published_at, updated_at, blog_categories(id, slug, blog_category_translations(locale, name)), blog_post_translations(locale, title, summary, content_md), blog_post_tags(tag_id)",
     )
+    .is("deleted_at", null)
     .order("published_at", { ascending: false })
     .order("updated_at", { ascending: false })
     .order("id");
@@ -138,6 +139,7 @@ export async function listCategories(): Promise<AdminCategoryRow[]> {
     .select(
       "id, slug, sort_order, blog_category_translations(locale, name)",
     )
+    .is("deleted_at", null)
     .order("sort_order")
     .order("id");
 
@@ -172,6 +174,7 @@ export async function listTags(): Promise<AdminTagRow[]> {
   const { data, error } = await client
     .from("blog_tags")
     .select("id, slug, blog_tag_translations(locale, name)")
+    .is("deleted_at", null)
     .order("id");
 
   if (error || !data) return [];
@@ -190,4 +193,86 @@ export async function listTags(): Promise<AdminTagRow[]> {
       nameVi: vi?.name ?? "",
     };
   });
+}
+
+export interface AdminTagRowWithUsage extends AdminTagRow {
+  usageCount: number;
+}
+
+export interface ListTagsAdminParams {
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export async function listTagsAdmin(
+  params: ListTagsAdminParams = {},
+): Promise<{ tags: AdminTagRowWithUsage[]; total: number; totalPages: number }> {
+  const client = await getServerClient();
+  const limit = Math.min(Math.max(params.limit ?? 20, 1), 100);
+  const page = Math.max(params.page ?? 1, 1);
+  const search = params.search?.trim().toLowerCase() ?? "";
+
+  const { data, error } = await client
+    .from("blog_tags")
+    .select("id, slug, blog_tag_translations(locale, name)")
+    .is("deleted_at", null)
+    .order("id");
+
+  if (error || !data) return { tags: [], total: 0, totalPages: 1 };
+
+  let rows = (data as unknown as {
+    id: string;
+    slug: string;
+    blog_tag_translations: CategoryName[];
+  }[]).map((row) => {
+    const en = localeValue(row.blog_tag_translations, "en");
+    const vi = localeValue(row.blog_tag_translations, "vi");
+    return {
+      id: row.id,
+      slug: row.slug,
+      nameEn: en?.name ?? "",
+      nameVi: vi?.name ?? "",
+    };
+  });
+
+  // Filter by search (id, slug, nameEn, nameVi)
+  if (search) {
+    rows = rows.filter(
+      (r) =>
+        r.id.toLowerCase().includes(search) ||
+        r.slug.toLowerCase().includes(search) ||
+        r.nameEn.toLowerCase().includes(search) ||
+        r.nameVi.toLowerCase().includes(search),
+    );
+  }
+
+  // Fetch usage counts (posts per tag) — only for filtered ids to limit query
+  const ids = rows.map((r) => r.id);
+  const usageMap = new Map<string, number>();
+  if (ids.length > 0) {
+    const { data: usageData } = await client.from("blog_post_tags").select("tag_id").in("tag_id", ids);
+    if (usageData) {
+      for (const row of usageData as unknown as Array<{ tag_id: string }>) {
+        usageMap.set(row.tag_id, (usageMap.get(row.tag_id) ?? 0) + 1);
+      }
+    }
+  }
+
+  const withUsage: AdminTagRowWithUsage[] = rows.map((r) => ({
+    ...r,
+    usageCount: usageMap.get(r.id) ?? 0,
+  }));
+
+  const total = withUsage.length;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const start = (page - 1) * limit;
+  const paginated = withUsage.slice(start, start + limit);
+
+  return { tags: paginated, total, totalPages };
+}
+
+export async function getTag(id: string): Promise<AdminTagRow | null> {
+  const tags = await listTags();
+  return tags.find((t) => t.id === id) ?? null;
 }

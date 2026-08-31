@@ -3,13 +3,9 @@
 import { revalidatePath } from "next/cache";
 
 import { getServerClient, isAdminUser } from "./session";
-import { findMediaReferences, type MediaBucket } from "./media";
+import type { MediaBucket } from "./media";
 import { imageDimensions } from "./image-dimensions";
-import {
-  deleteMediaAsset,
-  updateMediaAssetMeta,
-  upsertMediaAsset,
-} from "./media-catalog";
+import { updateMediaAssetMeta, upsertMediaAsset } from "./media-catalog";
 
 export interface MediaUploadResult {
   ok: boolean;
@@ -115,35 +111,28 @@ export async function deleteMedia(
 
   const client = await getServerClient();
 
-  // Block deletion while the file is still referenced by published media rows
-  // (Issue #21 reference/orphan criterion). Fail closed: if the reference query
-  // errors, refuse deletion with an actionable message rather than deleting.
-  let references: number;
-  try {
-    references = await findMediaReferences(client, bucket, path);
-  } catch {
-    return {
-      ok: false,
-      error: "Cannot verify media references right now. Please retry; deletion was refused to avoid orphaning media.",
-    };
-  }
-  if (references > 0) {
-    return {
-      ok: false,
-      error: `Cannot delete: still referenced by ${references} media row(s). Remove the media from its project/resume first.`,
-    };
-  }
-
-  const { error } = await client.storage.from(bucket).remove([path]);
+  const { data, error } = await client.rpc("cms_soft_delete_media_asset", {
+    p_bucket: bucket,
+    p_path: path,
+  });
   if (error) return { ok: false, error: error.message };
-
-  // Keep the catalog aligned with Storage; a stale row would render as a ghost
-  // grid entry whose thumbnail 404s.
-  await deleteMediaAsset(client, bucket, path);
+  if (data && typeof data === "object" && "status" in data) {
+    const res = data as { status: string; errorCode?: string; errorMessage?: string; dependencyCount?: number };
+    if (res.status === "blocked") {
+      return {
+        ok: false,
+        error: res.errorMessage ?? `Cannot delete: still referenced by ${res.dependencyCount ?? 0} item(s).`,
+      };
+    }
+    if (res.status !== "deleted") {
+      return { ok: false, error: res.errorMessage ?? res.errorCode ?? "Delete failed." };
+    }
+  }
 
   revalidatePath("/");
   revalidatePath("/vi");
   revalidatePath("/admin/media");
+  revalidatePath("/admin/trash");
   return { ok: true };
 }
 

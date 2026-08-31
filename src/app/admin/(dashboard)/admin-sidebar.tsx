@@ -90,6 +90,15 @@ function BlogIcon() {
   );
 }
 
+function TrashIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+      <path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      <path d="M10 11v6M14 11v6" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
 const navLinks: Array<{ href: string; label: string; icon: () => ReactNode }> = [
   { href: "/admin/profile", label: "Profile", icon: ProfileIcon },
   { href: "/admin/skills", label: "Skills", icon: SkillsIcon },
@@ -102,6 +111,12 @@ const navLinks: Array<{ href: string; label: string; icon: () => ReactNode }> = 
 const blogLinks: Array<{ href: string; label: string; icon: () => ReactNode }> = [
   { href: "/admin/blog", label: "Posts", icon: BlogIcon },
   { href: "/admin/blog/categories", label: "Categories", icon: BlogIcon },
+  { href: "/admin/blog/tags", label: "Tags", icon: BlogIcon },
+];
+
+const trashLinks: Array<{ href: string; label: string; icon: () => ReactNode }> = [
+  { href: "/admin/trash", label: "Trash", icon: TrashIcon },
+  { href: "/admin/audit", label: "Audit", icon: TrashIcon },
 ];
 
 function matchesHref(pathname: string, href: string): boolean {
@@ -161,6 +176,8 @@ export function AdminSidebar() {
         <SidebarLinks links={navLinks} pathname={pathname} />
         <p className="admin-sidebar__group-label">Blog</p>
         <SidebarLinks links={blogLinks} pathname={pathname} />
+        <p className="admin-sidebar__group-label">Trash</p>
+        <SidebarLinks links={trashLinks} pathname={pathname} />
       </nav>
     </aside>
   );

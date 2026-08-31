@@ -3315,12 +3315,29 @@ video {
   font-size: 0.9rem;
 }
 
+.admin-table {
+  table-layout: fixed;
+}
+
 .admin-table th,
 .admin-table td {
   text-align: left;
   padding: 0.625rem 0.75rem;
   border-bottom: 1px solid var(--color-border);
   vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-table td:last-child {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.admin-table td {
+  max-width: 18rem;
 }
 
 .admin-table thead th {
@@ -3784,8 +3801,12 @@ video {
 
 /* Native dialog shell for metadata editing + the library picker modal. */
 .admin-dialog {
+  position: fixed;
+  inset: 0;
   width: min(26rem, calc(100vw - 2rem));
   max-height: min(80vh, 48rem);
+  height: fit-content;
+  margin: auto;
   padding: 1.25rem;
   border: 1px solid var(--color-border-strong);
   border-radius: 1rem;
@@ -4519,7 +4540,7 @@ video {
 }
 
 .blog-breadcrumb__item--current {
-  max-width: 20rem;
+  max-width: 33rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

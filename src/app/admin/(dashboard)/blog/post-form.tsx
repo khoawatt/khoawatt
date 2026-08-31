@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 
 import {
   createPost,
-  createTag,
   previewMarkdown,
   updatePost,
   type BlogActionResult,
@@ -17,6 +16,7 @@ import { LinkInsertButton } from "./link-insert";
 import { MediaInsertButton } from "./media-insert";
 import { MediaPickerModal } from "../media/media-picker-modal";
 import { publicMediaUrl } from "@/features/cms/media-url";
+import { TagSelector } from "@/components/admin/tag-selector";
 
 interface PostFormProps {
   categories: AdminCategoryRow[];
@@ -132,8 +132,7 @@ export function PostForm({
     return value.slice(start, end);
   }
 
-  const [newTagName, setNewTagName] = useState("");
-  const [newTagError, setNewTagError] = useState<string | null>(null);
+  const [allTags, setAllTags] = useState<AdminTagRow[]>(tags);
 
   const [previewTab, setPreviewTab] = useState<LocaleTab | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
@@ -181,24 +180,6 @@ export function PostForm({
     // Toggling the active preview tab triggers the live re-render effect.
     setPreviewTab((current) => (current === locale ? null : locale));
     setPreviewError(null);
-  }
-
-  function addTag() {
-    const name = newTagName.trim();
-    if (!name) return;
-    setNewTagError(null);
-
-    startTransition(async () => {
-      const result = await createTag(name);
-      if (result.ok && result.id) {
-        setTagIds((current) =>
-          current.includes(result.id as string) ? current : [...current, result.id as string],
-        );
-        setNewTagName("");
-      } else {
-        setNewTagError(result.error ?? "Failed to create tag.");
-      }
-    });
   }
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -291,34 +272,7 @@ export function PostForm({
 
           <fieldset className="admin-field">
             <legend>Tags</legend>
-            {tags.length > 0 ? (
-              <div className="admin-check-group">
-                {tags.map((tag) => (
-                  <label className="admin-check" key={tag.id}>
-                    <input
-                      checked={tagIds.includes(tag.id)}
-                      onChange={() => toggleTag(tag.id)}
-                      type="checkbox"
-                    />
-                    <span>{tag.nameEn}</span>
-                  </label>
-                ))}
-              </div>
-            ) : (
-              <p className="admin-note">No tags yet.</p>
-            )}
-            <div className="admin-form-row">
-              <input
-                aria-label="New tag name"
-                onChange={(event) => setNewTagName(event.target.value)}
-                placeholder="Quick-add a tag"
-                value={newTagName}
-              />
-              <button disabled={isPending} onClick={addTag} type="button">
-                Add
-              </button>
-            </div>
-            {newTagError ? <p className="admin-error">{newTagError}</p> : null}
+            <TagSelector tags={allTags} selectedIds={tagIds} onToggle={toggleTag} onTagsChange={setAllTags} />
           </fieldset>
 
           <fieldset className="admin-field">
