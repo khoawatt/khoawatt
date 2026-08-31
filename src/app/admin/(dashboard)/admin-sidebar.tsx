@@ -129,6 +129,7 @@ const blogLinks: Array<{ href: string; label: string; icon: () => ReactNode }> =
 
 const trashLinks: Array<{ href: string; label: string; icon: () => ReactNode }> = [
   { href: "/admin/trash", label: "Trash", icon: TrashIcon },
+  { href: "/admin/audit", label: "Audit", icon: TrashIcon },
 ];
 
 function matchesHref(pathname: string, href: string): boolean {
