@@ -245,7 +245,7 @@ const verifiedExternalUrls = new Set([
   "https://youtu.be/4O9kGRFmXVY",
   "https://www.youtube.com/watch?v=BU1RvITWoi8",
   "https://youtu.be/WD_NulE5_l4",
-  "https://github.com/Akbi47/Feaon-ldp-v2",
+  "https://github.com/khoawatt/Feaon-ldp-v2",
   "https://codeforces.com/profile/anhkhoaquachvo",
 ]);
 
