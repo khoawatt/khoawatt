@@ -4523,7 +4523,7 @@ video {
 }
 
 .blog-breadcrumb__item--current {
-  max-width: 20rem;
+  max-width: 33rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
