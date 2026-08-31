@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { DeleteDialog } from "@/components/ui/delete-dialog";
+import { BulkDeleteBar } from "@/components/admin/bulk-delete-bar";
 import { inspectDelete } from "@/features/cms/delete/actions";
 
 import { deleteTag } from "../actions";
@@ -26,6 +27,20 @@ export function TagsManager({ tags, total, totalPages, currentPage, search }: Re
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const allSelected = tags.length > 0 && tags.every((t) => selected.has(t.id));
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function toggleAll() {
+    if (allSelected) setSelected(new Set());
+    else setSelected(new Set(tags.map((t) => t.id)));
+  }
 
   function updateParams(updates: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -105,6 +120,8 @@ export function TagsManager({ tags, total, totalPages, currentPage, search }: Re
       </p>
       {error ? <p className="admin-error">{error}</p> : null}
 
+      <BulkDeleteBar entity="blog_tag" selectedIds={Array.from(selected)} onClear={() => setSelected(new Set())} onDone={() => { setSelected(new Set()); router.refresh(); }} label="tags" />
+
       {tags.length === 0 ? (
         <p className="admin-empty">No tags found.</p>
       ) : (
@@ -112,6 +129,7 @@ export function TagsManager({ tags, total, totalPages, currentPage, search }: Re
           <table className="admin-table">
             <thead>
               <tr>
+                <th><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" /></th>
                 <th>ID</th>
                 <th>Name (EN / VI)</th>
                 <th>Usage</th>
@@ -121,6 +139,7 @@ export function TagsManager({ tags, total, totalPages, currentPage, search }: Re
             <tbody>
               {tags.map((tag) => (
                 <tr key={tag.id}>
+                  <td><input type="checkbox" checked={selected.has(tag.id)} onChange={() => toggle(tag.id)} aria-label={`Select ${tag.id}`} /></td>
                   <td><code>{tag.id}</code></td>
                   <td>{tag.nameEn} / {tag.nameVi}</td>
                   <td>
