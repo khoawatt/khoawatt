@@ -26,7 +26,7 @@ Each item records the current state in the repository and what is required to ac
 - **Question:** Which projects are featured, in what order, and what are the **real** Live Demo and Code destinations for each (or explicitly none)?
 - **Acceptance:** Featured set matches the owner-approved list; every Live Demo/Code URL is verified live by the owner; missing destinations are intentionally omitted (no placeholder links).
 - **Decision (2026-08-18):** Keep the current project dataset temporarily. The owner will replace it with real projects later. **This intentionally conflicts with Issue #16's "No placeholder/sample personal data remains" criterion** — recorded as an explicit owner-approved temporary-content exception; the old criterion is not silently marked satisfied.
-- **Link verification (2026-08-18):** All six retained external destinations were verified live (HTTP 200): `youtube.com/watch?v=f3NrpMbqwV4`, `youtu.be/4O9kGRFmXVY`, `youtube.com/watch?v=BU1RvITWoi8`, `youtu.be/WD_NulE5_l4`, `github.com/Akbi47/Feaon-ldp-v2`, `github.com/Akbi47`. This satisfies the "All external links are real and verified" criterion for the retained dataset; `atm-seeking` and `readingtime` intentionally omit Live Demo/Code URLs.
+- **Link verification (2026-08-18):** All six retained external destinations were verified live (HTTP 200): `youtube.com/watch?v=f3NrpMbqwV4`, `youtu.be/4O9kGRFmXVY`, `youtube.com/watch?v=BU1RvITWoi8`, `youtu.be/WD_NulE5_l4`, `github.com/khoawatt/Feaon-ldp-v2`, `github.com/khoawatt`. This satisfies the "All external links are real and verified" criterion for the retained dataset; `atm-seeking` and `readingtime` intentionally omit Live Demo/Code URLs.
 
 ### D3 — Public permission for employer/client names and supporting employment evidence
 
@@ -81,12 +81,12 @@ Each item records the current state in the repository and what is required to ac
 
 ### D8 — Contact / social destinations
 
-- **Current state:** `src/content/contact.ts` publishes GitHub (`https://github.com/Akbi47`) only. No verified email, phone, or location.
+- **Current state:** `src/content/contact.ts` publishes GitHub (`https://github.com/khoawatt`) only. No verified email, phone, or location.
 - **Inventory context:** "The live destinations were not accepted as final content by Issue #2; verify each before publication."
 - **Question:** Which contact/social destinations are final (GitHub, email, LinkedIn, etc.)? Are email/phone/location intentionally public?
 - **Acceptance:** Contact/social values are owner-approved and verified; absent values are intentionally omitted.
 - **Decision (2026-08-18):** Keep current contact/social destinations **as-is** — currently GitHub only. Do **not** invent email, phone, location, LinkedIn, or other destinations.
-- **Update (2026-08-22):** Owner supplied verified contact details — email `contact@khoawatt.com`, phone `+84 704823238`, location Ho Chi Minh, Vietnam. These now publish in `src/content/contact.ts` (email/phone as links, location plain text). Social set stays Facebook, Instagram, GitHub (`Akbi47`), X, LinkedIn; unconfigured socials render non-interactive until real URLs are provided.
+- **Update (2026-08-22):** Owner supplied verified contact details — email `contact@khoawatt.com`, phone `+84 704823238`, location Ho Chi Minh, Vietnam. These now publish in `src/content/contact.ts` (email/phone as links, location plain text). Social set stays Facebook, Instagram, GitHub (`khoawatt`), X, LinkedIn; unconfigured socials render non-interactive until real URLs are provided.
 - **Update (2026-08-22, later):** Owner added a Threads profile to the CMS (`social_links` row `thread` → `https://www.threads.com/khoawatt`). The `thread` platform is now supported end-to-end: `SocialPlatform` union, Simple Icons Threads glyph, static default, and the CMS platform allow-list (previously the row was silently filtered out).
 
 ### D9 — About FEAON role

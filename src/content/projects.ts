@@ -296,7 +296,7 @@ export const projects = [
       },
     ],
     liveDemoUrl: "https://www.youtube.com/watch?v=BU1RvITWoi8",
-    codeUrl: "https://github.com/Akbi47/Feaon-ldp-v2",
+    codeUrl: "https://github.com/khoawatt/Feaon-ldp-v2",
     featured: true,
     order: 5,
     highlights: [
