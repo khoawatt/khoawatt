@@ -50,7 +50,7 @@ export interface PortfolioProfileView {
 
 export const portfolioProfile = {
   name: "Quach Vo Anh Khoa",
-  githubUrl: "https://github.com/Akbi47",
+  githubUrl: "https://github.com/khoawatt",
   media: {
     hero: {
       src: "/images/profile/portrait-hero-banner.jpg",
