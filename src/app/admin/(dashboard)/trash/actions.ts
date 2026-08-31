@@ -56,3 +56,29 @@ export async function hardDeleteEntity(entity: string, id: string): Promise<Tras
   revalidatePath("/admin/trash");
   return { ok: true };
 }
+
+export async function forceHardDeleteEntity(entity: string, id: string): Promise<TrashActionResult> {
+  if (!(await isAdminUser())) return { ok: false, error: "Unauthorized." };
+  const client = await getServerClient();
+
+  if (entity === "media_asset") {
+    const [bucket, ...rest] = id.split(":");
+    const path = rest.join(":");
+    const { data, error } = await client.rpc("cms_force_hard_delete_media_asset", { p_bucket: bucket, p_path: path });
+    if (error) return { ok: false, error: error.message };
+    if (data && typeof data === "object" && "status" in data) {
+      const res = data as { status: string; errorCode?: string; errorMessage?: string };
+      if (res.status !== "deleted") return { ok: false, error: res.errorMessage ?? res.errorCode ?? "Force delete failed." };
+    }
+  } else {
+    const { data, error } = await client.rpc("cms_force_hard_delete_entity", { p_entity_type: entity, p_id: id });
+    if (error) return { ok: false, error: error.message };
+    if (data && typeof data === "object" && "status" in data) {
+      const res = data as { status: string; errorCode?: string; errorMessage?: string };
+      if (res.status !== "deleted") return { ok: false, error: res.errorMessage ?? res.errorCode ?? "Force delete failed." };
+    }
+  }
+
+  revalidatePath("/admin/trash");
+  return { ok: true };
+}

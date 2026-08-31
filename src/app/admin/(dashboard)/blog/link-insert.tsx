@@ -77,6 +77,10 @@ export function LinkInsertButton({
         onClick={() => setOpen(true)}
         type="button"
       >
+        <svg aria-hidden="true" fill="none" height="14" viewBox="0 0 24 24" width="14">
+          <path d="M10 13a5 5 0 0 0 7.54 0l1.5-1.5a5 5 0 0 0-7.07-7.07L10.5 5.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M14 11a5 5 0 0 0-7.54 0l-1.5 1.5a5 5 0 0 0 7.07 7.07l.92-.92" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
         Insert link
       </button>
       <dialog

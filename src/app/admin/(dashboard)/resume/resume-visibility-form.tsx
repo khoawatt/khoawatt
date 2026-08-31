@@ -2,14 +2,14 @@
 
 import { useState, useTransition } from "react";
 
-import type { SettingsView } from "./data";
-import { setResumePublicity } from "./actions";
+import type { SettingsView } from "../settings/data";
+import { setResumePublicity } from "../settings/actions";
 
-interface SettingsFormProps {
+interface ResumeVisibilityFormProps {
   initial: SettingsView;
 }
 
-export function SettingsForm({ initial }: SettingsFormProps) {
+export function ResumeVisibilityForm({ initial }: Readonly<ResumeVisibilityFormProps>) {
   const [view, setView] = useState(initial);
   const [confirmingVisible, setConfirmingVisible] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -45,6 +45,10 @@ export function SettingsForm({ initial }: SettingsFormProps) {
           <strong className={isVisible ? "is-visible" : "is-private"}>
             {isVisible ? "Visible" : "Private"}
           </strong>
+        </p>
+        <p className="admin-hint">
+          Controls the public resume section and gated media at{" "}
+          <code>/api/resume-media/*</code>. Private hides the section and blocks media.
         </p>
 
         {!isVisible ? (
