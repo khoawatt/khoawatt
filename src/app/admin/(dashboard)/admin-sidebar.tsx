@@ -4,19 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
-function SettingsIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
-      <path
-        d="M4 7h16M4 12h16M4 17h16"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.8"
-      />
-    </svg>
-  );
-}
-
 function ProfileIcon() {
   return (
     <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
@@ -113,7 +100,6 @@ function TrashIcon() {
 }
 
 const navLinks: Array<{ href: string; label: string; icon: () => ReactNode }> = [
-  { href: "/admin/settings", label: "Settings", icon: SettingsIcon },
   { href: "/admin/profile", label: "Profile", icon: ProfileIcon },
   { href: "/admin/skills", label: "Skills", icon: SkillsIcon },
   { href: "/admin/social", label: "Social", icon: SocialIcon },
@@ -132,7 +118,6 @@ const trashLinks: Array<{ href: string; label: string; icon: () => ReactNode }> 
 ];
 
 function matchesHref(pathname: string, href: string): boolean {
-  if (href === "/admin/settings") return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

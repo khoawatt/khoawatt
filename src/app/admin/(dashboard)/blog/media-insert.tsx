@@ -31,6 +31,11 @@ export function MediaInsertButton({ onInsert }: Readonly<MediaInsertButtonProps>
         onClick={() => setOpen(true)}
         type="button"
       >
+        <svg aria-hidden="true" fill="none" height="14" viewBox="0 0 24 24" width="14">
+          <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.7" />
+          <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none" />
+          <path d="M21 15l-5-5-7 7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
         Insert image
       </button>
       <MediaPickerModal
