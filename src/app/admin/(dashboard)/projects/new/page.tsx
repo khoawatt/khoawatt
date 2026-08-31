@@ -8,7 +8,7 @@ export const metadata = {
 export default function AdminNewProjectPage() {
   return (
     <AdminPage backHref="/admin/projects" title="New project">
-      <AdminFormCard>
+      <AdminFormCard className="admin-form-card--wide">
         <h2>Project details</h2>
         <ProjectForm />
       </AdminFormCard>

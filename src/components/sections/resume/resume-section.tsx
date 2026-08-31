@@ -119,31 +119,71 @@ export function ResumeSection({ content }: Readonly<ResumeSectionProps>) {
         </div>
 
         <div className="resume-layout">
-          <div
-            aria-label={content.categoriesLabel}
-            aria-orientation={orientation}
-            className="resume-categories"
-            role="tablist"
-          >
-            {content.categories.map((categoryItem, index) => (
+          <div className="resume-sidebar">
+            <div
+              aria-label={content.categoriesLabel}
+              aria-orientation={orientation}
+              className="resume-categories"
+              role="tablist"
+            >
+              {content.categories.map((categoryItem, index) => (
+                <button
+                  aria-controls={`resume-panel-${categoryItem.id}`}
+                  aria-selected={activeCategory === index}
+                  className="resume-category__item"
+                  id={`resume-tab-${categoryItem.id}`}
+                  key={categoryItem.id}
+                  onClick={() => selectCategory(index)}
+                  onKeyDown={(event) => handleCategoryKeyDown(event, index)}
+                  ref={(node) => {
+                    tabRefs.current[index] = node;
+                  }}
+                  role="tab"
+                  tabIndex={activeCategory === index ? 0 : -1}
+                  type="button"
+                >
+                  {categoryItem.name}
+                </button>
+              ))}
+            </div>
+
+            <div className="resume-panel__controls resume-panel__controls--below">
               <button
-                aria-controls={`resume-panel-${categoryItem.id}`}
-                aria-selected={activeCategory === index}
-                className="resume-category__item"
-                id={`resume-tab-${categoryItem.id}`}
-                key={categoryItem.id}
-                onClick={() => selectCategory(index)}
-                onKeyDown={(event) => handleCategoryKeyDown(event, index)}
-                ref={(node) => {
-                  tabRefs.current[index] = node;
-                }}
-                role="tab"
-                tabIndex={activeCategory === index ? 0 : -1}
+                aria-label={content.previousEntry}
+                className="resume-panel__control resume-panel__control--icon"
+                disabled={totalEntries <= 1}
+                onClick={() => goToEntry(activeEntry - 1)}
                 type="button"
               >
-                {categoryItem.name}
+                <svg aria-hidden="true" fill="none" height="20" viewBox="0 0 24 24" width="20">
+                  <path
+                    d="m14 6-6 6 6 6"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.8"
+                  />
+                </svg>
               </button>
-            ))}
+
+              <button
+                aria-label={content.nextEntry}
+                className="resume-panel__control resume-panel__control--icon"
+                disabled={totalEntries <= 1}
+                onClick={() => goToEntry(activeEntry + 1)}
+                type="button"
+              >
+                <svg aria-hidden="true" fill="none" height="20" viewBox="0 0 24 24" width="20">
+                  <path
+                    d="m10 6 6 6-6 6"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.8"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {content.categories.map((categoryItem, index) => (
@@ -162,44 +202,6 @@ export function ResumeSection({ content }: Readonly<ResumeSectionProps>) {
                   <span aria-hidden="true">/</span>
                   {String(categoryItem.entries.length).padStart(2, "0")}
                 </p>
-
-                <div className="resume-panel__controls">
-                  <button
-                    aria-label={content.previousEntry}
-                    className="resume-panel__arrow"
-                    disabled={totalEntries <= 1}
-                    onClick={() => goToEntry(activeEntry - 1)}
-                    type="button"
-                  >
-                    <svg aria-hidden="true" fill="none" height="20" viewBox="0 0 24 24" width="20">
-                      <path
-                        d="m14 6-6 6 6 6"
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="1.8"
-                      />
-                    </svg>
-                  </button>
-
-                  <button
-                    aria-label={content.nextEntry}
-                    className="resume-panel__arrow"
-                    disabled={totalEntries <= 1}
-                    onClick={() => goToEntry(activeEntry + 1)}
-                    type="button"
-                  >
-                    <svg aria-hidden="true" fill="none" height="20" viewBox="0 0 24 24" width="20">
-                      <path
-                        d="m10 6 6 6-6 6"
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="1.8"
-                      />
-                    </svg>
-                  </button>
-                </div>
               </div>
 
               <article className="resume-entry">

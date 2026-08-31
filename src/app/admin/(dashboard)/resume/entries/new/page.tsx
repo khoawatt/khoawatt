@@ -11,7 +11,7 @@ export default async function AdminNewResumeEntryPage() {
 
   return (
     <AdminPage backHref="/admin/resume" title="New resume entry">
-      <AdminFormCard>
+      <AdminFormCard className="admin-form-card--wide">
         <h2>Entry details</h2>
         <ResumeEntryForm categories={categories} />
       </AdminFormCard>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { DeleteDialog } from "@/components/ui/delete-dialog";
 
-import { hardDeleteEntity, restoreEntity } from "./actions";
+import { forceHardDeleteEntity, hardDeleteEntity, restoreEntity } from "./actions";
 import type { TrashItem } from "./data";
 
 const RETENTION_DAYS = 30;
@@ -28,8 +28,9 @@ export function TrashList({ items }: { items: TrashItem[] }) {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("all");
   const [isPending, startTransition] = useTransition();
-  const [confirm, setConfirm] = useState<{ entity: string; id: string; mode: "restore" | "hard" } | null>(null);
+  const [confirm, setConfirm] = useState<{ entity: string; id: string; mode: "restore" | "hard" | "force" } | null>(null);
   const [confirmInput, setConfirmInput] = useState("");
+  const [forceInput, setForceInput] = useState("");
   const [bulkHardOpen, setBulkHardOpen] = useState(false);
   const [bulkInput, setBulkInput] = useState("");
 
@@ -56,7 +57,7 @@ export function TrashList({ items }: { items: TrashItem[] }) {
 
   function handleHardDelete(entity: string, id: string) {
     if (confirmInput !== "DELETE") {
-      setError('Please type DELETE to confirm.');
+      setError("Please type DELETE to confirm.");
       return;
     }
     startTransition(async () => {
@@ -73,9 +74,28 @@ export function TrashList({ items }: { items: TrashItem[] }) {
     });
   }
 
+  function handleForceDelete(entity: string, id: string) {
+    if (forceInput !== "DELETE") {
+      setError("Please type DELETE to confirm force delete.");
+      return;
+    }
+    startTransition(async () => {
+      const res = await forceHardDeleteEntity(entity, id);
+      if (res.ok) {
+        setConfirm(null);
+        setForceInput("");
+        router.refresh();
+      } else {
+        setError(res.error ?? "Force delete failed.");
+        setConfirm(null);
+        setForceInput("");
+      }
+    });
+  }
+
   function handleBulkHardDelete() {
     if (bulkInput !== "DELETE") {
-      setError('Please type DELETE to confirm bulk.');
+      setError("Please type DELETE to confirm bulk.");
       return;
     }
     const eligible = filtered.filter((i) => isEligible(i.deletedAt));
@@ -151,6 +171,9 @@ export function TrashList({ items }: { items: TrashItem[] }) {
                 >
                   Permanent delete
                 </button>
+                <button type="button" className="admin-link-button admin-link-button--danger" disabled={isPending} onClick={() => setConfirm({ entity: item.entity, id: item.id, mode: "force" })} title="Bypass 30d retention">
+                  Force delete
+                </button>
               </div>
             </li>
           );
@@ -165,24 +188,27 @@ export function TrashList({ items }: { items: TrashItem[] }) {
         variant="warning"
         isPending={isPending}
         onConfirm={() => confirm && handleRestore(confirm.entity, confirm.id)}
-        onCancel={() => {
-          setConfirm(null);
-          setConfirmInput("");
-        }}
+        onCancel={() => setConfirm(null)}
       />
+
       {confirm?.mode === "hard" ? (
-        <div className="admin-dialog__overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
-          <div className="admin-dialog" style={{ background: "white", padding: "1.5rem", borderRadius: "8px", maxWidth: "480px", width: "90%" }}>
-            <h3 className="admin-dialog__title">Permanently delete {confirm.entity} &ldquo;{confirm.id}&rdquo;?</h3>
-            <p className="admin-note">This action cannot be undone. This item is eligible after {RETENTION_DAYS} days. Type <code>DELETE</code> to confirm.</p>
-            <input
-              aria-label="Type DELETE to confirm"
-              placeholder="DELETE"
-              value={confirmInput}
-              onChange={(e) => setConfirmInput(e.target.value)}
-              style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem", border: "1px solid #ccc", borderRadius: "4px" }}
-            />
-            <div className="admin-dialog__actions" style={{ marginTop: "1rem", display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Permanently delete ${confirm.entity} "${confirm.id}"`}
+          style={{ position: "fixed", inset: 0, background: "rgb(0 0 0 / 0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "1rem" }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setConfirm(null);
+              setConfirmInput("");
+            }
+          }}
+        >
+          <div className="admin-dialog" style={{ background: "var(--color-surface)", color: "var(--color-text)", border: "1px solid var(--color-border-strong)", width: "min(26rem, calc(100vw - 2rem))", margin: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <h3 className="admin-dialog__title" style={{ color: "var(--color-text)" }}>Permanently delete {confirm.entity} “{confirm.id}”?</h3>
+            <p className="admin-note" style={{ color: "var(--color-text-muted)" }}>This action cannot be undone. This item is eligible after {RETENTION_DAYS} days. Type <code>DELETE</code> to confirm.</p>
+            <input aria-label="Type DELETE to confirm" placeholder="DELETE" value={confirmInput} onChange={(e) => setConfirmInput(e.target.value)} style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem 0.75rem", border: "1px solid var(--color-border-strong)", borderRadius: "0.5rem", background: "var(--color-surface)", color: "var(--color-text)" }} />
+            <div className="admin-dialog__actions" style={{ marginTop: "1rem" }}>
               <button type="button" onClick={() => { setConfirm(null); setConfirmInput(""); }} disabled={isPending}>Cancel</button>
               <button type="button" className="admin-button admin-button--danger" disabled={isPending || confirmInput !== "DELETE"} onClick={() => handleHardDelete(confirm.entity, confirm.id)}>
                 {isPending ? "…" : "Permanently delete"}
@@ -192,19 +218,40 @@ export function TrashList({ items }: { items: TrashItem[] }) {
         </div>
       ) : null}
 
+      {confirm?.mode === "force" ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Force delete ${confirm.entity} "${confirm.id}"`}
+          style={{ position: "fixed", inset: 0, background: "rgb(0 0 0 / 0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "1rem" }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setConfirm(null);
+              setForceInput("");
+            }
+          }}
+        >
+          <div className="admin-dialog" style={{ background: "var(--color-surface)", color: "var(--color-text)", border: "1px solid var(--color-border-strong)", width: "min(26rem, calc(100vw - 2rem))", margin: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <h3 className="admin-dialog__title" style={{ color: "var(--color-text)" }}>Force delete {confirm.entity} “{confirm.id}”?</h3>
+            <p className="admin-note" style={{ color: "var(--color-text-muted)" }}>Bypass 30d retention — permanently deletes now. Type <code>DELETE</code> to confirm.</p>
+            <input aria-label="Type DELETE to confirm force" placeholder="DELETE" value={forceInput} onChange={(e) => setForceInput(e.target.value)} style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem 0.75rem", border: "1px solid var(--color-border-strong)", borderRadius: "0.5rem", background: "var(--color-surface)", color: "var(--color-text)" }} />
+            <div className="admin-dialog__actions" style={{ marginTop: "1rem" }}>
+              <button type="button" onClick={() => { setConfirm(null); setForceInput(""); }} disabled={isPending}>Cancel</button>
+              <button type="button" className="admin-button admin-button--danger" disabled={isPending || forceInput !== "DELETE"} onClick={() => handleForceDelete(confirm.entity, confirm.id)}>
+                {isPending ? "…" : "Force delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {bulkHardOpen ? (
-        <div className="admin-dialog__overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
-          <div className="admin-dialog" style={{ background: "white", padding: "1.5rem", borderRadius: "8px", maxWidth: "480px", width: "90%" }}>
-            <h3 className="admin-dialog__title">Empty trash — {eligibleCount} eligible item(s)?</h3>
-            <p className="admin-note">Only items older than {RETENTION_DAYS} days will be permanently deleted. Type <code>DELETE</code> to confirm.</p>
-            <input
-              aria-label="Type DELETE to confirm bulk"
-              placeholder="DELETE"
-              value={bulkInput}
-              onChange={(e) => setBulkInput(e.target.value)}
-              style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem", border: "1px solid #ccc", borderRadius: "4px" }}
-            />
-            <div className="admin-dialog__actions" style={{ marginTop: "1rem", display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+        <div role="dialog" aria-modal="true" aria-label="Empty trash" style={{ position: "fixed", inset: 0, background: "rgb(0 0 0 / 0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "1rem" }} onClick={(e) => { if (e.target === e.currentTarget) { setBulkHardOpen(false); setBulkInput(""); } }}>
+          <div className="admin-dialog" style={{ background: "var(--color-surface)", color: "var(--color-text)", border: "1px solid var(--color-border-strong)", width: "min(26rem, calc(100vw - 2rem))", margin: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <h3 className="admin-dialog__title" style={{ color: "var(--color-text)" }}>Empty trash — {eligibleCount} eligible item(s)?</h3>
+            <p className="admin-note" style={{ color: "var(--color-text-muted)" }}>Only items older than {RETENTION_DAYS} days will be permanently deleted. Type <code>DELETE</code> to confirm.</p>
+            <input aria-label="Type DELETE to confirm bulk" placeholder="DELETE" value={bulkInput} onChange={(e) => setBulkInput(e.target.value)} style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem 0.75rem", border: "1px solid var(--color-border-strong)", borderRadius: "0.5rem", background: "var(--color-surface)", color: "var(--color-text)" }} />
+            <div className="admin-dialog__actions" style={{ marginTop: "1rem" }}>
               <button type="button" onClick={() => { setBulkHardOpen(false); setBulkInput(""); }} disabled={isPending}>Cancel</button>
               <button type="button" className="admin-button admin-button--danger" disabled={isPending || bulkInput !== "DELETE"} onClick={handleBulkHardDelete}>
                 {isPending ? "…" : `Delete ${eligibleCount}`}
