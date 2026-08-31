@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, updateTag } from "next/cache";
+import { revalidatePath, updateTag as updateCacheTag } from "next/cache";
 
 import { renderMarkdown } from "@/features/blog/markdown";
 import { BLOG_CACHE_TAG } from "@/features/blog/repository";
@@ -86,7 +86,7 @@ async function withBlogClient() {
 /** Single cache choke point: every successful blog mutation refreshes all
  *  cached blog reads together (spec §4 + §9). */
 function invalidateBlog() {
-  updateTag(BLOG_CACHE_TAG);
+  updateCacheTag(BLOG_CACHE_TAG);
 }
 
 // --- Posts --------------------------------------------------------------------
@@ -236,7 +236,13 @@ export async function deleteCategory(id: string): Promise<BlogActionResult> {
   return { ok: true };
 }
 
-// --- Tags (inline creation in the post editor) --------------------------------
+// --- Tags (admin + inline creation) ----------------------------------------
+
+export interface BlogTagFormData {
+  id?: string;
+  nameEn: string;
+  nameVi: string;
+}
 
 export interface CreateTagResult {
   ok: boolean;
@@ -259,7 +265,61 @@ export async function createTag(name: string): Promise<CreateTagResult> {
   if (error) return { ok: false, error: error.message };
 
   invalidateBlog();
+  revalidatePath("/admin/blog/tags");
   return { ok: true, id };
+}
+
+export async function createTagFull(data: BlogTagFormData): Promise<BlogActionResult> {
+  const client = await withBlogClient();
+  if (!client) return { ok: false, error: "Unauthorized." };
+  const id = data.id && data.id.length > 0 ? data.id : slugify(data.nameEn);
+  if (invalidSlug(id)) return { ok: false, fieldErrors: { id: "Invalid tag slug." } };
+  if (!required(data.nameEn) || !required(data.nameVi)) {
+    return { ok: false, fieldErrors: { nameEn: "EN and VI names are required." } };
+  }
+  const { error } = await client.rpc("cms_upsert_blog_tag", {
+    p_id: id,
+    p_name_en: data.nameEn.trim(),
+    p_name_vi: data.nameVi.trim(),
+  });
+  if (error) return { ok: false, error: error.message };
+  invalidateBlog();
+  revalidatePath("/admin/blog/tags");
+  return { ok: true };
+}
+
+export async function updateTag(data: BlogTagFormData): Promise<BlogActionResult> {
+  const client = await withBlogClient();
+  if (!client) return { ok: false, error: "Unauthorized." };
+  if (!data.id) return { ok: false, error: "Missing tag id." };
+  if (!required(data.nameEn) || !required(data.nameVi)) {
+    return { ok: false, fieldErrors: { nameEn: "EN and VI names are required." } };
+  }
+  const { error } = await client.rpc("cms_upsert_blog_tag", {
+    p_id: data.id,
+    p_name_en: data.nameEn.trim(),
+    p_name_vi: data.nameVi.trim(),
+  });
+  if (error) return { ok: false, error: error.message };
+  invalidateBlog();
+  revalidatePath("/admin/blog/tags");
+  revalidatePath(`/admin/blog/tags/${data.id}`);
+  return { ok: true };
+}
+
+export async function deleteTag(id: string): Promise<BlogActionResult> {
+  const client = await withBlogClient();
+  if (!client) return { ok: false, error: "Unauthorized." };
+  const { data, error } = await client.rpc("cms_delete_blog_tag", { p_id: id });
+  if (error) return { ok: false, error: error.message };
+  if (data && typeof data === "object" && "status" in data) {
+    const res = data as { status: string; errorCode?: string; errorMessage?: string };
+    if (res.status !== "deleted") return { ok: false, error: res.errorMessage ?? res.errorCode ?? "Failed to delete." };
+  }
+  invalidateBlog();
+  revalidatePath("/admin/blog/tags");
+  revalidatePath("/admin/blog");
+  return { ok: true };
 }
 
 // --- Markdown preview (shared pipeline, same as the public site) --------------

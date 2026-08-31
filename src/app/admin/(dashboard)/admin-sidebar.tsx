@@ -111,6 +111,7 @@ const navLinks: Array<{ href: string; label: string; icon: () => ReactNode }> = 
 const blogLinks: Array<{ href: string; label: string; icon: () => ReactNode }> = [
   { href: "/admin/blog", label: "Posts", icon: BlogIcon },
   { href: "/admin/blog/categories", label: "Categories", icon: BlogIcon },
+  { href: "/admin/blog/tags", label: "Tags", icon: BlogIcon },
 ];
 
 const trashLinks: Array<{ href: string; label: string; icon: () => ReactNode }> = [
