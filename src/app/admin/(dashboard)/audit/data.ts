@@ -10,6 +10,7 @@ export interface AuditRow {
   operation: string;
   dependencyCount: number;
   resolutionType: string | null;
+  snapshot: unknown | null;
   createdAt: string;
 }
 
@@ -17,7 +18,7 @@ export async function listAudit(limit = 100): Promise<AuditRow[]> {
   const client = await getServerClient();
   const { data, error } = await client
     .from("admin_delete_audit")
-    .select("id, actor_id, actor_type, entity_type, entity_id, entity_label, operation, dependency_count, resolution_type, created_at")
+    .select("id, actor_id, actor_type, entity_type, entity_id, entity_label, operation, dependency_count, resolution_type, snapshot, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error || !data) return [];
@@ -31,6 +32,7 @@ export async function listAudit(limit = 100): Promise<AuditRow[]> {
     operation: string;
     dependency_count: number;
     resolution_type: string | null;
+    snapshot: unknown | null;
     created_at: string;
   }>).map((row) => ({
     id: row.id,
@@ -42,6 +44,7 @@ export async function listAudit(limit = 100): Promise<AuditRow[]> {
     operation: row.operation,
     dependencyCount: row.dependency_count,
     resolutionType: row.resolution_type,
+    snapshot: row.snapshot,
     createdAt: row.created_at,
   }));
 }
