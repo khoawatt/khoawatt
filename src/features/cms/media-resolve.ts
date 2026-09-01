@@ -1,3 +1,24 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+/**
+ * Remove resume_media rows that reference the given path via thumbnail_src or full_src.
+ * Exact match (not substring/ILIKE) — the caller has already verified the path is the
+ * stored object path, and the DB check in cms_soft_delete_media_asset uses ilike for
+ * candidate but this authoritative delete uses exact eq.
+ */
+export async function removeResumeMediaReference(
+  client: SupabaseClient,
+  path: string,
+): Promise<{ deletedRows: number }> {
+  const { data, error } = await client
+    .from("resume_media")
+    .delete()
+    .or(`thumbnail_src.eq.${path},full_src.eq.${path}`)
+    .select("id");
+  if (error) throw new Error(error.message);
+  return { deletedRows: data?.length ?? 0 };
+}
+
 /**
  * Precise removal of embedded image nodes containing a given path.
  * This is the authoritative parser step for P4 — candidate ILIKE is not used for mutation.
