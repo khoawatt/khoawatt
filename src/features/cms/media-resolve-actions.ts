@@ -104,39 +104,38 @@ export async function resolveAndDeleteMedia(
   }
 
   // 2b. Resume media: delete resume_media rows that reference the path (exact match, bypass DELETE_DEPENDENCY_EXISTS)
-  // This mirrors removeResumeMediaReference but with per-row guard to avoid TOCTOU on trashed parents.
+  // Prefer RPC for atomicity; fallback to direct helper if RPC not yet migrated
   try {
-    // Prefer the dedicated helper for the common case (exact eq on both columns)
-    // Keep a guarded per-row path to respect resume_entries.deleted_at IS NULL
-    const { data: resumeRows, error: resumeError } = await client
-      .from("resume_media")
-      .select("id, resume_entry_id")
-      .or(`thumbnail_src.eq.${path},full_src.eq.${path}`);
-    if (resumeError) throw new Error(resumeError.message);
-    if (resumeRows?.length) {
-      for (const row of resumeRows) {
-        const typed = row as { id: string; resume_entry_id: string };
-        // Guard: only delete if the owning resume_entry is not trashed
-        const { data: entryData, error: entryError } = await client
-          .from("resume_entries")
-          .select("id")
-          .eq("id", typed.resume_entry_id)
-          .is("deleted_at", null)
-          .limit(1);
-        if (entryError) throw new Error(entryError.message);
-        if (!entryData || entryData.length === 0) continue;
-        const { error: delError } = await client.from("resume_media").delete().eq("id", typed.id);
-        if (delError) throw new Error(delError.message);
-        removedResumeRows++;
+    const { data: rpcData, error: rpcError } = await client.rpc("cms_resolve_resume_media", { p_path: path });
+    if (rpcError) throw new Error(rpcError.message);
+    if (rpcData && typeof rpcData === "object" && "deletedRows" in rpcData) {
+      removedResumeRows = (rpcData as { deletedRows: number }).deletedRows ?? 0;
+    } else {
+      // Fallback: direct per-row guarded delete (for environments where RPC not yet deployed)
+      const { data: resumeRows, error: resumeError } = await client
+        .from("resume_media")
+        .select("id, resume_entry_id")
+        .or(`thumbnail_src.eq.${path},full_src.eq.${path}`);
+      if (resumeError) throw new Error(resumeError.message);
+      if (resumeRows?.length) {
+        for (const row of resumeRows) {
+          const typed = row as { id: string; resume_entry_id: string };
+          const { data: entryData, error: entryError } = await client
+            .from("resume_entries")
+            .select("id")
+            .eq("id", typed.resume_entry_id)
+            .is("deleted_at", null)
+            .limit(1);
+          if (entryError) throw new Error(entryError.message);
+          if (!entryData || entryData.length === 0) continue;
+          const { error: delError } = await client.from("resume_media").delete().eq("id", typed.id);
+          if (delError) throw new Error(delError.message);
+          removedResumeRows++;
+        }
       }
-    }
-    // Also ensure helper is kept in sync — if no rows found via select, try helper as fallback for edge cases
-    if (removedResumeRows === 0) {
-      const fallback = await removeResumeMediaReference(client, path).catch(() => ({ deletedRows: 0 }));
-      // fallback already deleted matching rows, but we already filtered by active parent;
-      // only count if we didn't already handle them
-      if (fallback.deletedRows > 0 && !resumeRows?.length) {
-        removedResumeRows = fallback.deletedRows;
+      if (removedResumeRows === 0) {
+        const fallback = await removeResumeMediaReference(client, path).catch(() => ({ deletedRows: 0 }));
+        if (fallback.deletedRows > 0 && !resumeRows?.length) removedResumeRows = fallback.deletedRows;
       }
     }
   } catch (e) {
