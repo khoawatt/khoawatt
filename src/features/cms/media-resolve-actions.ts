@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 
 import { getServerClient, isAdminUser } from "@/features/cms/session";
-import { removeMarkdownImageNodes } from "./media-resolve";
+import { removeMarkdownImageNodes, removeResumeMediaReference } from "./media-resolve";
 
 export interface ResolveResult {
   ok: boolean;
   error?: string;
   clearedCovers?: number;
   removedNodes?: number;
+  removedResumeRows?: number;
 }
 
 export async function resolveAndDeleteMedia(
@@ -21,6 +22,7 @@ export async function resolveAndDeleteMedia(
 
   let clearedCovers = 0;
   let removedNodes = 0;
+  let removedResumeRows = 0;
 
   // 1. Clear cover_bucket_path where it matches (SET NULL) — authoritative exact match, with FOR UPDATE semantics via RPC
   // Use the dedicated RPC for set_null to ensure audit and proper handling
@@ -101,6 +103,45 @@ export async function resolveAndDeleteMedia(
     return { ok: false, error: e instanceof Error ? e.message : "Failed to resolve content." };
   }
 
+  // 2b. Resume media: delete resume_media rows that reference the path (exact match, bypass DELETE_DEPENDENCY_EXISTS)
+  // Prefer RPC for atomicity; fallback to direct helper if RPC not yet migrated
+  try {
+    const { data: rpcData, error: rpcError } = await client.rpc("cms_resolve_resume_media", { p_path: path });
+    if (rpcError) throw new Error(rpcError.message);
+    if (rpcData && typeof rpcData === "object" && "deletedRows" in rpcData) {
+      removedResumeRows = (rpcData as { deletedRows: number }).deletedRows ?? 0;
+    } else {
+      // Fallback: direct per-row guarded delete (for environments where RPC not yet deployed)
+      const { data: resumeRows, error: resumeError } = await client
+        .from("resume_media")
+        .select("id, resume_entry_id")
+        .or(`thumbnail_src.eq.${path},full_src.eq.${path}`);
+      if (resumeError) throw new Error(resumeError.message);
+      if (resumeRows?.length) {
+        for (const row of resumeRows) {
+          const typed = row as { id: string; resume_entry_id: string };
+          const { data: entryData, error: entryError } = await client
+            .from("resume_entries")
+            .select("id")
+            .eq("id", typed.resume_entry_id)
+            .is("deleted_at", null)
+            .limit(1);
+          if (entryError) throw new Error(entryError.message);
+          if (!entryData || entryData.length === 0) continue;
+          const { error: delError } = await client.from("resume_media").delete().eq("id", typed.id);
+          if (delError) throw new Error(delError.message);
+          removedResumeRows++;
+        }
+      }
+      if (removedResumeRows === 0) {
+        const fallback = await removeResumeMediaReference(client, path).catch(() => ({ deletedRows: 0 }));
+        if (fallback.deletedRows > 0 && !resumeRows?.length) removedResumeRows = fallback.deletedRows;
+      }
+    }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Failed to resolve resume media." };
+  }
+
   // 3. Now soft delete the media asset (should succeed as references cleared)
   const { data: deleteData, error: deleteError } = await client.rpc("cms_soft_delete_media_asset", {
     p_bucket: bucket,
@@ -117,5 +158,6 @@ export async function resolveAndDeleteMedia(
   revalidatePath("/admin/media");
   revalidatePath("/admin/trash");
   revalidatePath("/admin/blog");
-  return { ok: true, clearedCovers, removedNodes };
+  revalidatePath("/admin/resume");
+  return { ok: true, clearedCovers, removedNodes, removedResumeRows };
 }
