@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SiteHeader } from "@/components/navigation/site-header";
 import { StructuredData } from "@/components/seo/structured-data";
 import { FooterSection } from "@/components/sections/footer/footer-section";
@@ -67,6 +68,7 @@ export default async function LocaleLayout({
             messages={messages.header}
           />
         </ThemeProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
