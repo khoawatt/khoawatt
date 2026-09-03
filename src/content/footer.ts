@@ -1,6 +1,7 @@
 import type { Locale } from "@/features/i18n/config";
 
 import { contactDetails } from "./contact";
+import { getTipContent, type TipContentView } from "./tip";
 
 type LocalizedText = Readonly<Record<Locale, string>>;
 
@@ -41,6 +42,7 @@ export interface FooterContentView {
     rights: string;
     backToTop: string;
   };
+  tip: TipContentView;
   aria: {
     footerLabel: string;
   };
@@ -192,6 +194,7 @@ export function getFooterContent(locale: Locale): FooterContentView {
       rights: localized(footerCopy.bottom.rights),
       backToTop: localized(footerCopy.bottom.backToTop),
     },
+    tip: getTipContent(locale),
     aria: {
       footerLabel: localized(footerCopy.aria.footerLabel),
     },
