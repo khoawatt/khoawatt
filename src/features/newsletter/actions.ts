@@ -59,5 +59,3 @@ export async function subscribeNewsletter(
       return { status: "server-error" };
   }
 }
-
-export { initialState as newsletterInitialState };
