@@ -58,23 +58,29 @@ export function FeedSwitcher({ locale }: Readonly<FeedSwitcherProps>) {
         <svg
           aria-hidden="true"
           fill="none"
-          height="19"
+          height="20"
           viewBox="0 0 24 24"
-          width="19"
+          width="20"
         >
           <path
-            d="M4 11a9 9 0 0 1 9 9"
+            d="M3.5 10.5A12.5 12.5 0 0 1 16 23"
             stroke="currentColor"
-            strokeWidth="1.8"
+            strokeWidth="2"
             strokeLinecap="round"
           />
           <path
-            d="M4 15.5a4.5 4.5 0 0 1 4.5 4.5"
+            d="M3.5 15a8 8 0 0 1 8 8"
             stroke="currentColor"
-            strokeWidth="1.8"
+            strokeWidth="2"
             strokeLinecap="round"
           />
-          <circle cx="4.5" cy="19.5" r="1.5" fill="currentColor" />
+          <path
+            d="M3.5 19.2a3.8 3.8 0 0 1 3.8 3.8"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <circle cx="3.6" cy="20.2" r="1.7" fill="currentColor" />
         </svg>
       </button>
 
