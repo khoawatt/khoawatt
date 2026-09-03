@@ -2648,6 +2648,14 @@ video {
   margin-inline-end: auto;
 }
 
+.feed-switcher__hint {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 400;
+  opacity: 0.85;
+}
+
 .theme-toggle {
   display: inline-grid;
   width: 2.25rem;
