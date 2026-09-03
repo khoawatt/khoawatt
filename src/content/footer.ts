@@ -25,7 +25,11 @@ export interface FooterContentView {
     helper: string;
     placeholder: string;
     submit: string;
+    submitting: string;
     unavailable: string;
+    success: string;
+    alreadySubscribed: string;
+    serverError: string;
     errors: Record<string, string>;
     aria: {
       formLabel: string;
@@ -67,8 +71,8 @@ const footerCopy = {
       vi: "Nhận tin cập nhật định kỳ về dự án và thử nghiệm mới.",
     },
     helper: {
-      en: "Sign-up is not active yet — your email will not be sent or stored.",
-      vi: "Đăng ký chưa được mở — email của bạn sẽ không được gửi hoặc lưu trữ.",
+      en: "No spam — unsubscribe anytime. Only occasional updates.",
+      vi: "Không spam — hủy đăng ký bất cứ lúc nào. Chỉ gửi cập nhật thỉnh thoảng.",
     },
     placeholder: {
       en: "you@example.com",
@@ -78,9 +82,25 @@ const footerCopy = {
       en: "Subscribe",
       vi: "Đăng ký",
     },
+    submitting: {
+      en: "Subscribing…",
+      vi: "Đang đăng ký…",
+    },
     unavailable: {
-      en: "Newsletter sign-up is not available yet — your email has not been sent or stored.",
-      vi: "Đăng ký bản tin hiện chưa được mở — email của bạn chưa được gửi hoặc lưu trữ.",
+      en: "You’re subscribed — thank you! Check your inbox for a confirmation.",
+      vi: "Bạn đã đăng ký — cảm ơn! Hãy kiểm tra hộp thư để xác nhận.",
+    },
+    success: {
+      en: "You’re subscribed — thank you! Check your inbox for a confirmation.",
+      vi: "Bạn đã đăng ký — cảm ơn! Hãy kiểm tra hộp thư để xác nhận.",
+    },
+    alreadySubscribed: {
+      en: "You’re already subscribed — thank you!",
+      vi: "Bạn đã đăng ký rồi — cảm ơn!",
+    },
+    serverError: {
+      en: "Something went wrong — please try again shortly.",
+      vi: "Đã có lỗi xảy ra — vui lòng thử lại sau.",
     },
     errors: {
       required: {
@@ -151,7 +171,11 @@ export function getFooterContent(locale: Locale): FooterContentView {
       helper: localized(footerCopy.newsletter.helper),
       placeholder: localized(footerCopy.newsletter.placeholder),
       submit: localized(footerCopy.newsletter.submit),
+      submitting: localized(footerCopy.newsletter.submitting),
       unavailable: localized(footerCopy.newsletter.unavailable),
+      success: localized(footerCopy.newsletter.success),
+      alreadySubscribed: localized(footerCopy.newsletter.alreadySubscribed),
+      serverError: localized(footerCopy.newsletter.serverError),
       errors: Object.fromEntries(
         Object.entries(footerCopy.newsletter.errors).map(([key, value]) => [
           key,
