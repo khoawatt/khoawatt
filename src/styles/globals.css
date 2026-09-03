@@ -2424,6 +2424,23 @@ video {
   font-weight: var(--font-weight-medium);
 }
 
+.newsletter-form__status--success {
+  border-color: transparent;
+  background: color-mix(in oklch, var(--color-success) 14%, transparent);
+  color: var(--color-success);
+}
+
+.newsletter-form__status--error {
+  border-color: transparent;
+  background: color-mix(in oklch, var(--color-error) 12%, transparent);
+  color: var(--color-error);
+}
+
+.newsletter-form__submit:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
 .site-footer__bottom {
   display: flex;
   align-items: center;

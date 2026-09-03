@@ -157,7 +157,7 @@ export function FooterSection({
 
           <div className="site-footer__column">
             <h3 className="site-footer__heading">{content.newsletter.label}</h3>
-            <NewsletterForm content={content} />
+            <NewsletterForm content={content} locale={locale} />
           </div>
         </div>
 
