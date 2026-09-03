@@ -2,6 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Locale } from "@/features/i18n/config";
 
+import type { ContactDeliveryProvider } from "@/features/contact/delivery";
+
+import { buildNewsletterConfirmationEmail, getNewsletterFromAddress } from "./email";
 import {
   validateNewsletterSignup,
   type NewsletterFieldErrors,
@@ -14,6 +17,8 @@ export interface NewsletterSubmitInput {
 
 export interface NewsletterSubmitDeps {
   supabase: SupabaseClient | null;
+  provider?: ContactDeliveryProvider | null;
+  fromEmail?: string;
 }
 
 export type NewsletterSubmitResult =
@@ -49,6 +54,27 @@ export async function submitNewsletter(
       return { status: "already-subscribed" };
     }
     return { status: "server-error" };
+  }
+
+  // Send confirmation email (best-effort, do not block success on provider failure)
+  if (deps.provider) {
+    try {
+      const from = (deps.fromEmail ?? getNewsletterFromAddress()).trim();
+      if (from.length > 0) {
+        const { subject, text, html } = buildNewsletterConfirmationEmail(email, locale);
+        // Fire-and-forget with timeout handled inside provider
+        await deps.provider.send({
+          from,
+          to: email,
+          replyTo: from,
+          subject,
+          text,
+          html,
+        });
+      }
+    } catch {
+      // Ignore email errors — subscription is already persisted
+    }
   }
 
   return { status: "success" };

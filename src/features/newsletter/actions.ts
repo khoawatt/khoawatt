@@ -3,7 +3,9 @@
 import { getServiceClient } from "@/features/cms/server";
 import { hasCmsConfig } from "@/features/cms/config";
 import type { Locale } from "@/features/i18n/config";
+import { createResendDeliveryProvider } from "@/features/contact/delivery";
 
+import { getNewsletterFromAddress } from "./email";
 import { submitNewsletter, type NewsletterSubmitResult } from "./submit";
 import {
   validateNewsletterSignup,
@@ -16,8 +18,6 @@ export type NewsletterActionState =
   | { status: "already-subscribed" }
   | { status: "field-error"; fieldErrors: NewsletterFieldErrors }
   | { status: "server-error" };
-
-const initialState: NewsletterActionState = { status: "idle" };
 
 export async function subscribeNewsletter(
   _prevState: NewsletterActionState,
@@ -41,9 +41,14 @@ export async function subscribeNewsletter(
     return { status: "server-error" };
   }
 
+  const fromEmail = getNewsletterFromAddress();
+  const provider = createResendDeliveryProvider({
+    apiKey: process.env.RESEND_API_KEY ?? "",
+  });
+
   const result: NewsletterSubmitResult = await submitNewsletter(
     { email, locale },
-    { supabase: client },
+    { supabase: client, provider, fromEmail },
   );
 
   switch (result.status) {
