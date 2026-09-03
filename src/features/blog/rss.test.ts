@@ -10,12 +10,18 @@ const posts: RssPostRow[] = [
     slug: "hello-welcome",
     summary: "A summary with <tags> & entities.",
     publishedAt: "2026-08-20T00:00:00Z",
+    updatedAt: "2026-08-20T00:00:00Z",
+    category: { slug: "tech", name: "Tech" },
+    tags: [{ slug: "nextjs", name: "Next.js" }],
   },
   {
     title: "Second post",
     slug: "second-post",
     summary: "Plain summary.",
     publishedAt: "2026-08-15T00:00:00Z",
+    updatedAt: "2026-08-15T00:00:00Z",
+    category: { slug: "life", name: "Life" },
+    tags: [],
   },
 ];
 
@@ -28,8 +34,10 @@ test("rss feed: en channel + item structure and URLs", () => {
   assert.ok(xml.includes('rel="self" type="application/rss+xml"'));
   assert.ok(xml.includes("https://khoawatt.com/feed.xml"));
   assert.ok(xml.includes("https://khoawatt.com/blog/hello-welcome"));
-  assert.ok(xml.includes("<guid>https://khoawatt.com/blog/hello-welcome</guid>"));
+  assert.ok(xml.includes("https://khoawatt.com/blog/hello-welcome</guid>"));
   assert.ok(xml.includes("<pubDate>Thu, 20 Aug 2026 00:00:00 GMT</pubDate>"));
+  assert.ok(xml.includes("<category>Tech</category>"));
+  assert.ok(xml.includes("<author>"));
 });
 
 test("rss feed: vi channel uses /vi feed and /vi/blog URLs", () => {

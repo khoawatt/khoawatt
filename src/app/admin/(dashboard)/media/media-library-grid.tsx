@@ -155,8 +155,13 @@ export function MediaLibraryGrid({
         router.refresh();
         return;
       }
-      // If blocked, try resolve & delete
-      if (result.error?.includes("referenced") || result.error?.includes("blocked")) {
+      // If blocked (including DELETE_DEPENDENCY_EXISTS from RPC), try resolve & delete
+      if (
+        result.error?.includes("referenced") ||
+        result.error?.includes("blocked") ||
+        result.error?.includes("DELETE_DEPENDENCY_EXISTS") ||
+        result.error?.includes("DEPENDENCY")
+      ) {
         const resolveRes = await resolveAndDeleteMedia(deleteTarget.bucket, deleteTarget.path);
         if (resolveRes.ok) {
           setItems((current) => current.filter((item) => item.path !== deleteTarget.path));
@@ -248,7 +253,19 @@ export function MediaLibraryGrid({
                   let deleted = 0;
                   for (const path of Array.from(selected)) {
                     const res = await deleteMedia(bucket, path);
-                    if (res.ok) deleted++;
+                    if (res.ok) {
+                      deleted++;
+                      continue;
+                    }
+                    if (
+                      res.error?.includes("referenced") ||
+                      res.error?.includes("blocked") ||
+                      res.error?.includes("DELETE_DEPENDENCY_EXISTS") ||
+                      res.error?.includes("DEPENDENCY")
+                    ) {
+                      const r2 = await resolveAndDeleteMedia(bucket, path);
+                      if (r2.ok) deleted++;
+                    }
                   }
                   setItems((current) => current.filter((item) => !selected.has(item.path)));
                   setSelected(new Set());

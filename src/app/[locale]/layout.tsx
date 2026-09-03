@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SiteHeader } from "@/components/navigation/site-header";
 import { StructuredData } from "@/components/seo/structured-data";
 import { FooterSection } from "@/components/sections/footer/footer-section";
@@ -41,13 +42,15 @@ export default async function LocaleLayout({
     <html data-theme="light" lang={locale} suppressHydrationWarning>
       <head>
         <ThemeScript />
-        {/* RSS autodiscovery (spec §7): `/feed.xml` (en) / `/vi/feed.xml` (vi) */}
+        {/* Feed autodiscovery: RSS (per-locale) + Atom/JSONFeed (global, spec §7) */}
         <link
           href={getLocalizedPathname("/feed.xml", locale)}
           rel="alternate"
           title="RSS"
           type="application/rss+xml"
         />
+        <link href="/feeds.atom" rel="alternate" title="Atom" type="application/atom+xml" />
+        <link href="/feeds.json" rel="alternate" title="JSON Feed" type="application/feed+json" />
       </head>
       <body>
         <StructuredData locale={locale} />
@@ -67,6 +70,7 @@ export default async function LocaleLayout({
             messages={messages.header}
           />
         </ThemeProvider>
+        <SpeedInsights />
       </body>
     </html>
   );

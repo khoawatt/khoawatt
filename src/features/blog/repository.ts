@@ -450,50 +450,83 @@ export async function queryPublishedPostIndex(): Promise<
   }
 }
 
-/** Uncached core: category slugs that currently have published posts. */
-export async function queryCategoryIndex(): Promise<{ slug: string }[]> {
+/** Uncached core: category slugs that currently have published posts, with lastModified derived from the newest post in each category. */
+export async function queryCategoryIndex(): Promise<{ slug: string; updatedAt: string | null }[]> {
   const client = getServiceClient();
   if (!hasCmsConfig() || !client) return [];
 
   try {
-    const { data, error } = await client
-      .from("blog_categories")
-      .select("slug, blog_posts(id)")
-      .is("deleted_at", null)
-      .eq("blog_posts.status", "published");
-    if (error || !data) return [];
+    // Fetch categories and the latest published post's updated_at per category.
+    // Supabase does not expose MAX() directly, so we fetch (category_id, updated_at)
+    // for all published posts and reduce in JS — bounded by published post count
+    // (blog is small; sitemap is cached 1d and tagged `blog`).
+    const [catResult, postResult] = await Promise.all([
+      client.from("blog_categories").select("id, slug").is("deleted_at", null),
+      client
+        .from("blog_posts")
+        .select("category_id, updated_at")
+        .eq("status", "published")
+        .is("deleted_at", null),
+    ]);
 
-    return (data as unknown as { slug: string; blog_posts: unknown[] }[])
-      .filter((row) => row.blog_posts.length > 0)
-      .map((row) => ({ slug: row.slug }));
+    if (catResult.error || !catResult.data) return [];
+    if (postResult.error || !postResult.data) {
+      // Fallback: return slugs without dates
+      return (catResult.data as unknown as { slug: string }[]).map((r) => ({
+        slug: r.slug,
+        updatedAt: null,
+      }));
+    }
+
+    const maxByCategory = new Map<string, string>();
+    for (const row of postResult.data as unknown as { category_id: string; updated_at: string }[]) {
+      const prev = maxByCategory.get(row.category_id);
+      if (!prev || row.updated_at > prev) maxByCategory.set(row.category_id, row.updated_at);
+    }
+
+    return (catResult.data as unknown as { id: string; slug: string }[])
+      .filter((row) => maxByCategory.has(row.id))
+      .map((row) => ({ slug: row.slug, updatedAt: maxByCategory.get(row.id) ?? null }));
   } catch {
     return [];
   }
 }
 
-/** Uncached core: tag slugs that currently have published posts. */
-export async function queryTagIndex(): Promise<{ slug: string }[]> {
+/** Uncached core: tag slugs that currently have published posts, with lastModified derived from the newest post carrying each tag. */
+export async function queryTagIndex(): Promise<{ slug: string; updatedAt: string | null }[]> {
   const client = getServiceClient();
   if (!hasCmsConfig() || !client) return [];
 
   try {
-    const { data, error } = await client
-      .from("blog_tags")
-      .select("slug, blog_post_tags!inner(blog_posts!inner(status))")
-      .is("deleted_at", null)
-      .eq("blog_post_tags.blog_posts.status", "published");
-    if (error || !data) return [];
+    const [tagResult, postTagResult] = await Promise.all([
+      client.from("blog_tags").select("id, slug").is("deleted_at", null),
+      // Join through blog_post_tags → blog_posts to get updated_at per tag.
+      // We fetch (tag_id, blog_posts.updated_at) and reduce to max per tag.
+      client
+        .from("blog_post_tags")
+        .select("tag_id, blog_posts!inner(updated_at, status, deleted_at)")
+        .eq("blog_posts.status", "published")
+        .is("blog_posts.deleted_at", null),
+    ]);
 
-    // Deduplicate slugs (inner join may return duplicates if multiple posts per tag)
-    const seen = new Set<string>();
-    const result: { slug: string }[] = [];
-    for (const row of data as unknown as { slug: string }[]) {
-      if (!seen.has(row.slug)) {
-        seen.add(row.slug);
-        result.push({ slug: row.slug });
-      }
+    if (tagResult.error || !tagResult.data) return [];
+    if (postTagResult.error || !postTagResult.data) {
+      return (tagResult.data as unknown as { slug: string }[]).map((r) => ({
+        slug: r.slug,
+        updatedAt: null,
+      }));
     }
-    return result;
+
+    const maxByTag = new Map<string, string>();
+    for (const row of postTagResult.data as unknown as { tag_id: string; blog_posts: { updated_at: string } }[]) {
+      const updatedAt = row.blog_posts.updated_at;
+      const prev = maxByTag.get(row.tag_id);
+      if (!prev || updatedAt > prev) maxByTag.set(row.tag_id, updatedAt);
+    }
+
+    return (tagResult.data as unknown as { id: string; slug: string }[])
+      .filter((row) => maxByTag.has(row.id))
+      .map((row) => ({ slug: row.slug, updatedAt: maxByTag.get(row.id) ?? null }));
   } catch {
     return [];
   }
@@ -539,12 +572,16 @@ export interface RssPostRow {
   slug: string;
   summary: string;
   publishedAt: string;
+  updatedAt: string;
+  category: { slug: string; name: string };
+  tags: { slug: string; name: string }[];
 }
 
-/** Uncached core: latest published posts for the RSS feed (spec §7). */
+/** Uncached core: latest published posts for the RSS/Atom/JSON feed (spec §7). */
 export async function queryRssPosts(
   locale: Locale,
   limit = 20,
+  offset = 0,
 ): Promise<RssPostRow[]> {
   const client = getServiceClient();
   if (!hasCmsConfig() || !client) return [];
@@ -552,29 +589,59 @@ export async function queryRssPosts(
   try {
     const { data, error } = await client
       .from("blog_posts")
-      .select(postSelect())
+      .select(
+        `${postSelect()}, blog_post_tags(tag_id, blog_tags(slug, blog_tag_translations(locale, name)))` as string,
+      )
       .eq("status", "published")
       .is("deleted_at", null)
       .order("published_at", { ascending: false })
       .order("id")
-      .limit(limit);
+      .range(offset, offset + limit - 1);
     if (error || !data) return [];
 
-    return (data as unknown as PostRow[])
+    return (data as unknown as (PostRow & { blog_post_tags: PostTagLinkRow[] })[])
       .map((row) => {
-        const item = mapPostListItem(row, locale);
-        return item
-          ? {
-              title: item.title,
-              slug: item.slug,
-              summary: item.summary,
-              publishedAt: item.publishedAt,
-            }
-          : null;
+        const item = mapPostListItem(row as unknown as PostRow, locale);
+        if (!item) return null;
+        const tags = (row.blog_post_tags ?? [])
+          .map((link) => {
+            const tagName = localeRow(link.blog_tags?.blog_tag_translations, locale);
+            return link.blog_tags && tagName
+              ? { slug: link.blog_tags.slug, name: tagName.name }
+              : null;
+          })
+          .filter((tag): tag is { slug: string; name: string } => tag !== null);
+
+        return {
+          title: item.title,
+          slug: item.slug,
+          summary: item.summary,
+          publishedAt: item.publishedAt,
+          updatedAt: item.updatedAt,
+          category: item.category,
+          tags,
+        };
       })
       .filter((row): row is RssPostRow => row !== null);
   } catch {
     return [];
+  }
+}
+
+/** Total count of published posts for feed pagination (used by Atom/JSON feeds). */
+export async function queryRssPostCount(): Promise<number> {
+  const client = getServiceClient();
+  if (!hasCmsConfig() || !client) return 0;
+  try {
+    const { count, error } = await client
+      .from("blog_posts")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "published")
+      .is("deleted_at", null);
+    if (error) return 0;
+    return count ?? 0;
+  } catch {
+    return 0;
   }
 }
 
@@ -635,7 +702,19 @@ export const getCategoryNav = unstable_cache(
 );
 
 export const getRssPosts = unstable_cache(
-  (locale: Locale) => queryRssPosts(locale, 20),
+  (locale: Locale) => queryRssPosts(locale, 20, 0),
   ["blog", "rss-posts"],
+  { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
+);
+
+export const getRssPostsPaginated = unstable_cache(
+  (locale: Locale, limit: number, offset: number) => queryRssPosts(locale, limit, offset),
+  ["blog", "rss-posts-paginated"],
+  { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
+);
+
+export const getRssPostCount = unstable_cache(
+  () => queryRssPostCount(),
+  ["blog", "rss-post-count"],
   { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
 );

@@ -161,7 +161,10 @@ export function Article({ locale, messages, post }: Readonly<ArticleProps>) {
             <Image
               alt={post.coverImage.alt}
               className="blog-article__cover"
+              fetchPriority="high"
               height={post.coverImage.height}
+              priority
+              sizes="(min-width: 64rem) 42rem, 100vw"
               src={post.coverImage.src}
               width={post.coverImage.width}
             />
