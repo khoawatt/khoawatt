@@ -252,7 +252,7 @@ export function MediaLibraryGrid({
                 startTransition(async () => {
                   let deleted = 0;
                   for (const path of Array.from(selected)) {
-                    let res = await deleteMedia(bucket, path);
+                    const res = await deleteMedia(bucket, path);
                     if (res.ok) {
                       deleted++;
                       continue;

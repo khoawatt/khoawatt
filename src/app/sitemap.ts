@@ -31,10 +31,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const homeLanguages = languagesFor("/");
   const blogLanguages = languagesFor("/blog");
 
+  // Derive lastModified for aggregated routes from the freshest published post,
+  // so Google sees a stable timestamp instead of `now()` on every request.
+  const latestPostDate = posts.reduce<Date | null>((latest, post) => {
+    const d = new Date(post.updatedAt || post.publishedAt);
+    return !latest || d > latest ? d : latest;
+  }, null);
+  const blogLastModified = latestPostDate ?? new Date();
+  const homeLastModified = latestPostDate ?? new Date();
+
   return [
     {
       url: getAbsoluteUrl(getLocalizedPathname("/", "en")),
-      lastModified: new Date(),
+      lastModified: homeLastModified,
       changeFrequency: "monthly",
       priority: 1,
       alternates: { languages: homeLanguages },
@@ -43,14 +52,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .filter((locale) => locale !== "en")
       .map((locale) => ({
         url: getAbsoluteUrl(getLocalizedPathname("/", locale)),
-        lastModified: new Date(),
+        lastModified: homeLastModified,
         changeFrequency: "monthly" as const,
         priority: 1,
         alternates: { languages: homeLanguages },
       })),
     ...locales.map((locale) => ({
       url: getAbsoluteUrl(getLocalizedPathname("/blog", locale)),
-      lastModified: new Date(),
+      lastModified: blogLastModified,
       changeFrequency: "weekly" as const,
       priority: 0.8,
       alternates: { languages: blogLanguages },
@@ -69,7 +78,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         url: getAbsoluteUrl(
           getLocalizedPathname(`/blog/category/${category.slug}`, locale),
         ),
-        lastModified: new Date(),
+        lastModified: category.updatedAt ? new Date(category.updatedAt) : blogLastModified,
         changeFrequency: "monthly" as const,
         priority: 0.6,
         alternates: { languages: languagesFor(`/blog/category/${category.slug}`) },
@@ -78,7 +87,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...tags.flatMap((tag) =>
       locales.map((locale) => ({
         url: getAbsoluteUrl(getLocalizedPathname(`/blog/tag/${tag.slug}`, locale)),
-        lastModified: new Date(),
+        lastModified: tag.updatedAt ? new Date(tag.updatedAt) : blogLastModified,
         changeFrequency: "monthly" as const,
         priority: 0.5,
         alternates: { languages: languagesFor(`/blog/tag/${tag.slug}`) },
