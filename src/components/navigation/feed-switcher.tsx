@@ -63,24 +63,24 @@ export function FeedSwitcher({ locale }: Readonly<FeedSwitcherProps>) {
           width="20"
         >
           <path
-            d="M3.5 10.5A12.5 12.5 0 0 1 16 23"
+            d="M5.5 14.5A4 4 0 0 1 9.5 18.5"
             stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
           />
           <path
-            d="M3.5 15a8 8 0 0 1 8 8"
+            d="M5.5 10.5A8 8 0 0 1 13.5 18.5"
             stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
           />
           <path
-            d="M3.5 19.2a3.8 3.8 0 0 1 3.8 3.8"
+            d="M5.5 6.5A12 12 0 0 1 17.5 18.5"
             stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
           />
-          <circle cx="3.6" cy="20.2" r="1.7" fill="currentColor" />
+          <circle cx="5.5" cy="18.5" r="1.7" fill="currentColor" />
         </svg>
       </button>
 
