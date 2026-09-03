@@ -38,3 +38,4 @@ yarn-error.log*
 # Local system files and private keys
 .DS_Store
 *.pem
+.worktrees/
