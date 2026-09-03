@@ -32,6 +32,7 @@ export function PostCard({ locale, messages, post }: Readonly<PostCardProps>) {
           alt={post.coverImage.alt}
           className="blog-card__cover"
           height={post.coverImage.height}
+          sizes="(min-width: 64rem) 22rem, (min-width: 48rem) 45vw, 90vw"
           src={post.coverImage.src}
           width={post.coverImage.width}
         />
