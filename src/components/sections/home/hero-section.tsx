@@ -111,8 +111,9 @@ export function HeroSection({ profile }: Readonly<HeroSectionProps>) {
               <Image
                 alt={profile.hero.image.alt}
                 className="home-hero__image"
+                fetchPriority="high"
                 height={profile.hero.image.height}
-                preload
+                priority
                 sizes="(min-width: 64rem) 42vw, (min-width: 48rem) 68vw, calc(100vw - 2rem)"
                 src={profile.hero.image.src}
                 style={{ objectPosition: profile.hero.image.focalPoint }}
