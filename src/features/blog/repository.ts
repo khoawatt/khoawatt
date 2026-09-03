@@ -450,50 +450,83 @@ export async function queryPublishedPostIndex(): Promise<
   }
 }
 
-/** Uncached core: category slugs that currently have published posts. */
-export async function queryCategoryIndex(): Promise<{ slug: string }[]> {
+/** Uncached core: category slugs that currently have published posts, with lastModified derived from the newest post in each category. */
+export async function queryCategoryIndex(): Promise<{ slug: string; updatedAt: string | null }[]> {
   const client = getServiceClient();
   if (!hasCmsConfig() || !client) return [];
 
   try {
-    const { data, error } = await client
-      .from("blog_categories")
-      .select("slug, blog_posts(id)")
-      .is("deleted_at", null)
-      .eq("blog_posts.status", "published");
-    if (error || !data) return [];
+    // Fetch categories and the latest published post's updated_at per category.
+    // Supabase does not expose MAX() directly, so we fetch (category_id, updated_at)
+    // for all published posts and reduce in JS — bounded by published post count
+    // (blog is small; sitemap is cached 1d and tagged `blog`).
+    const [catResult, postResult] = await Promise.all([
+      client.from("blog_categories").select("id, slug").is("deleted_at", null),
+      client
+        .from("blog_posts")
+        .select("category_id, updated_at")
+        .eq("status", "published")
+        .is("deleted_at", null),
+    ]);
 
-    return (data as unknown as { slug: string; blog_posts: unknown[] }[])
-      .filter((row) => row.blog_posts.length > 0)
-      .map((row) => ({ slug: row.slug }));
+    if (catResult.error || !catResult.data) return [];
+    if (postResult.error || !postResult.data) {
+      // Fallback: return slugs without dates
+      return (catResult.data as unknown as { slug: string }[]).map((r) => ({
+        slug: r.slug,
+        updatedAt: null,
+      }));
+    }
+
+    const maxByCategory = new Map<string, string>();
+    for (const row of postResult.data as unknown as { category_id: string; updated_at: string }[]) {
+      const prev = maxByCategory.get(row.category_id);
+      if (!prev || row.updated_at > prev) maxByCategory.set(row.category_id, row.updated_at);
+    }
+
+    return (catResult.data as unknown as { id: string; slug: string }[])
+      .filter((row) => maxByCategory.has(row.id))
+      .map((row) => ({ slug: row.slug, updatedAt: maxByCategory.get(row.id) ?? null }));
   } catch {
     return [];
   }
 }
 
-/** Uncached core: tag slugs that currently have published posts. */
-export async function queryTagIndex(): Promise<{ slug: string }[]> {
+/** Uncached core: tag slugs that currently have published posts, with lastModified derived from the newest post carrying each tag. */
+export async function queryTagIndex(): Promise<{ slug: string; updatedAt: string | null }[]> {
   const client = getServiceClient();
   if (!hasCmsConfig() || !client) return [];
 
   try {
-    const { data, error } = await client
-      .from("blog_tags")
-      .select("slug, blog_post_tags!inner(blog_posts!inner(status))")
-      .is("deleted_at", null)
-      .eq("blog_post_tags.blog_posts.status", "published");
-    if (error || !data) return [];
+    const [tagResult, postTagResult] = await Promise.all([
+      client.from("blog_tags").select("id, slug").is("deleted_at", null),
+      // Join through blog_post_tags → blog_posts to get updated_at per tag.
+      // We fetch (tag_id, blog_posts.updated_at) and reduce to max per tag.
+      client
+        .from("blog_post_tags")
+        .select("tag_id, blog_posts!inner(updated_at, status, deleted_at)")
+        .eq("blog_posts.status", "published")
+        .is("blog_posts.deleted_at", null),
+    ]);
 
-    // Deduplicate slugs (inner join may return duplicates if multiple posts per tag)
-    const seen = new Set<string>();
-    const result: { slug: string }[] = [];
-    for (const row of data as unknown as { slug: string }[]) {
-      if (!seen.has(row.slug)) {
-        seen.add(row.slug);
-        result.push({ slug: row.slug });
-      }
+    if (tagResult.error || !tagResult.data) return [];
+    if (postTagResult.error || !postTagResult.data) {
+      return (tagResult.data as unknown as { slug: string }[]).map((r) => ({
+        slug: r.slug,
+        updatedAt: null,
+      }));
     }
-    return result;
+
+    const maxByTag = new Map<string, string>();
+    for (const row of postTagResult.data as unknown as { tag_id: string; blog_posts: { updated_at: string } }[]) {
+      const updatedAt = row.blog_posts.updated_at;
+      const prev = maxByTag.get(row.tag_id);
+      if (!prev || updatedAt > prev) maxByTag.set(row.tag_id, updatedAt);
+    }
+
+    return (tagResult.data as unknown as { id: string; slug: string }[])
+      .filter((row) => maxByTag.has(row.id))
+      .map((row) => ({ slug: row.slug, updatedAt: maxByTag.get(row.id) ?? null }));
   } catch {
     return [];
   }
