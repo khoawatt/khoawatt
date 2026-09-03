@@ -42,13 +42,15 @@ export default async function LocaleLayout({
     <html data-theme="light" lang={locale} suppressHydrationWarning>
       <head>
         <ThemeScript />
-        {/* RSS autodiscovery (spec §7): `/feed.xml` (en) / `/vi/feed.xml` (vi) */}
+        {/* Feed autodiscovery: RSS (per-locale) + Atom/JSONFeed (global, spec §7) */}
         <link
           href={getLocalizedPathname("/feed.xml", locale)}
           rel="alternate"
           title="RSS"
           type="application/rss+xml"
         />
+        <link href="/feeds.atom" rel="alternate" title="Atom" type="application/atom+xml" />
+        <link href="/feeds.json" rel="alternate" title="JSON Feed" type="application/feed+json" />
       </head>
       <body>
         <StructuredData locale={locale} />
