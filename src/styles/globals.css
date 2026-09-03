@@ -2425,18 +2425,138 @@ video {
 }
 
 .site-footer__bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
   gap: var(--space-4);
+  justify-items: center;
   margin-block-start: var(--space-10);
   padding-block-start: var(--space-6);
   border-block-start: 1px solid var(--color-border);
+  text-align: center;
 }
 
 .site-footer__copyright {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
+}
+
+.site-footer__tip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.site-footer__tip-label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.site-footer__tip-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-footer__tip-link {
+  display: inline-grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  transition:
+    color var(--motion-duration-fast) var(--motion-ease-standard),
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.site-footer__tip-link:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.site-footer__tip-link:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.site-footer__tip-link[data-platform="buymeacoffee"]:hover {
+  border-color: #ffdd00;
+  background: #ffdd00;
+  color: #0f0f0f;
+}
+
+.site-footer__tip-link[data-platform="kofi"]:hover {
+  border-color: #ff5e5b;
+  background: #ff5e5b;
+  color: white;
+}
+
+.site-footer__tip-link[data-platform="momo"] {
+  border-color: color-mix(in oklch, #a50064 35%, var(--color-border));
+  color: #a50064;
+}
+
+.site-footer__tip-link[data-platform="momo"]:hover {
+  border-color: #a50064;
+  background: #a50064;
+  color: white;
+}
+
+.site-footer__tip-link[data-platform="zalopay"] {
+  border-color: color-mix(in oklch, #0068ff 35%, var(--color-border));
+  color: #0068ff;
+}
+
+.site-footer__tip-link[data-platform="zalopay"]:hover {
+  border-color: #0068ff;
+  background: #0068ff;
+  color: white;
+}
+
+[data-theme="dark"] .site-footer__tip-link[data-platform="momo"] {
+  color: oklch(62% 0.22 350);
+  border-color: color-mix(in oklch, #a50064 45%, var(--color-border));
+}
+
+[data-theme="dark"] .site-footer__tip-link[data-platform="zalopay"] {
+  color: oklch(62% 0.18 250);
+  border-color: color-mix(in oklch, #0068ff 45%, var(--color-border));
+}
+
+[data-theme="dark"] .site-footer__tip-link[data-platform="momo"]:hover,
+[data-theme="dark"] .site-footer__tip-link[data-platform="zalopay"]:hover {
+  color: white;
+}
+
+.site-footer__tip-icon-text {
+  font-family: var(--font-family-sans);
+  font-size: 0.7rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.site-footer__tip-icon-text[data-platform="zalopay"] {
+  font-size: 0.62rem;
+  letter-spacing: -0.03em;
 }
 
 .site-footer__back-to-top {
@@ -2462,6 +2582,38 @@ video {
   border-color: var(--color-border-strong);
   background: var(--color-accent-soft);
   transform: translateY(-1px);
+}
+
+@media (min-width: 48rem) {
+  .site-footer__bottom {
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    justify-items: stretch;
+    text-align: start;
+  }
+
+  .site-footer__copyright {
+    justify-self: start;
+    text-align: start;
+  }
+
+  .site-footer__tip {
+    justify-self: center;
+  }
+
+  .site-footer__back-to-top {
+    justify-self: end;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-footer__tip-link {
+    transition: none;
+  }
+
+  .site-footer__tip-link:hover {
+    transform: none;
+  }
 }
 
 @media (min-width: 48rem) {
