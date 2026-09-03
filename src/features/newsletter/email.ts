@@ -44,6 +44,8 @@ export function buildNewsletterConfirmationEmail(
     : `You’ve subscribed with ${email}. I’ll send occasional updates on projects and experiments — no spam, unsubscribe anytime.`;
 
   const ctaLabel = isVi ? "Xem blog" : "Visit blog";
+  const unsubscribeLabel = isVi ? "Hủy đăng ký" : "Unsubscribe";
+  const unsubscribeUrl = `${getAbsoluteUrl("/api/newsletter/unsubscribe")}?email=${encodeURIComponent(email)}&locale=${locale}`;
   const footerNote = isVi
     ? "Bạn nhận được email này vì đã đăng ký tại khoawatt.com. Nếu không phải bạn, hãy bỏ qua email này."
     : "You’re receiving this because you subscribed at khoawatt.com. If this wasn’t you, just ignore this email.";
@@ -57,6 +59,7 @@ export function buildNewsletterConfirmationEmail(
     `Home: ${homeUrl}`,
     "",
     footerNote,
+    `${unsubscribeLabel}: ${unsubscribeUrl}`,
     "— Khoa Watt",
   ].join("\n");
 
@@ -80,6 +83,13 @@ export function buildNewsletterConfirmationEmail(
     <div style="margin-top:20px;padding:16px;background:rgba(224,183,99,0.08);border:1px solid rgba(224,183,99,0.18);border-radius:12px;color:#8A867E;font-size:13px;line-height:1.6;">
       ${escapeHtml(footerNote)}<br>
       <span style="color:#C9C4B8;">${escapeHtml(email)}</span> · <a href="${site}" style="color:#E0B763;text-decoration:none;">khoawatt.com</a>
+      <div style="margin-top:10px;">
+        <a href="${unsubscribeUrl}" style="display:inline-block;color:#8A867E;text-decoration:underline;font-size:12px;">${escapeHtml(unsubscribeLabel)}</a>
+        <span style="color:#5A5752;font-size:12px;"> · ${escapeHtml(email)}</span>
+      </div>
+    </div>
+    <div style="margin-top:10px;text-align:center;">
+      <a href="${unsubscribeUrl}" style="display:inline-block;background:transparent;color:#8A867E;border:1px solid #2A2826;text-decoration:none;font-size:13px;padding:8px 16px;border-radius:999px;">${escapeHtml(unsubscribeLabel)}</a>
     </div>
     <div style="margin-top:16px;color:#8A867E;font-size:12px;">— Khoa Watt · <a href="${site}" style="color:#8A867E;">khoawatt.com</a></div>
   </div>
