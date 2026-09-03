@@ -572,12 +572,16 @@ export interface RssPostRow {
   slug: string;
   summary: string;
   publishedAt: string;
+  updatedAt: string;
+  category: { slug: string; name: string };
+  tags: { slug: string; name: string }[];
 }
 
-/** Uncached core: latest published posts for the RSS feed (spec §7). */
+/** Uncached core: latest published posts for the RSS/Atom/JSON feed (spec §7). */
 export async function queryRssPosts(
   locale: Locale,
   limit = 20,
+  offset = 0,
 ): Promise<RssPostRow[]> {
   const client = getServiceClient();
   if (!hasCmsConfig() || !client) return [];
@@ -585,29 +589,59 @@ export async function queryRssPosts(
   try {
     const { data, error } = await client
       .from("blog_posts")
-      .select(postSelect())
+      .select(
+        `${postSelect()}, blog_post_tags(tag_id, blog_tags(slug, blog_tag_translations(locale, name)))` as string,
+      )
       .eq("status", "published")
       .is("deleted_at", null)
       .order("published_at", { ascending: false })
       .order("id")
-      .limit(limit);
+      .range(offset, offset + limit - 1);
     if (error || !data) return [];
 
-    return (data as unknown as PostRow[])
+    return (data as unknown as (PostRow & { blog_post_tags: PostTagLinkRow[] })[])
       .map((row) => {
-        const item = mapPostListItem(row, locale);
-        return item
-          ? {
-              title: item.title,
-              slug: item.slug,
-              summary: item.summary,
-              publishedAt: item.publishedAt,
-            }
-          : null;
+        const item = mapPostListItem(row as unknown as PostRow, locale);
+        if (!item) return null;
+        const tags = (row.blog_post_tags ?? [])
+          .map((link) => {
+            const tagName = localeRow(link.blog_tags?.blog_tag_translations, locale);
+            return link.blog_tags && tagName
+              ? { slug: link.blog_tags.slug, name: tagName.name }
+              : null;
+          })
+          .filter((tag): tag is { slug: string; name: string } => tag !== null);
+
+        return {
+          title: item.title,
+          slug: item.slug,
+          summary: item.summary,
+          publishedAt: item.publishedAt,
+          updatedAt: item.updatedAt,
+          category: item.category,
+          tags,
+        };
       })
       .filter((row): row is RssPostRow => row !== null);
   } catch {
     return [];
+  }
+}
+
+/** Total count of published posts for feed pagination (used by Atom/JSON feeds). */
+export async function queryRssPostCount(): Promise<number> {
+  const client = getServiceClient();
+  if (!hasCmsConfig() || !client) return 0;
+  try {
+    const { count, error } = await client
+      .from("blog_posts")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "published")
+      .is("deleted_at", null);
+    if (error) return 0;
+    return count ?? 0;
+  } catch {
+    return 0;
   }
 }
 
@@ -668,7 +702,19 @@ export const getCategoryNav = unstable_cache(
 );
 
 export const getRssPosts = unstable_cache(
-  (locale: Locale) => queryRssPosts(locale, 20),
+  (locale: Locale) => queryRssPosts(locale, 20, 0),
   ["blog", "rss-posts"],
+  { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
+);
+
+export const getRssPostsPaginated = unstable_cache(
+  (locale: Locale, limit: number, offset: number) => queryRssPosts(locale, limit, offset),
+  ["blog", "rss-posts-paginated"],
+  { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
+);
+
+export const getRssPostCount = unstable_cache(
+  () => queryRssPostCount(),
+  ["blog", "rss-post-count"],
   { tags: [BLOG_CACHE_TAG], revalidate: BLOG_SAFETY_NET_SECONDS },
 );

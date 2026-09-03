@@ -20,6 +20,7 @@ import {
 } from "@/features/navigation/config";
 import { getLocalizedPathname } from "@/features/i18n/routing";
 import { ThemeToggle } from "@/features/theme/theme-toggle";
+import { FeedSwitcher } from "./feed-switcher";
 
 interface SiteHeaderProps {
   githubUrl: string;
@@ -413,6 +414,7 @@ export function SiteHeader({
                 messages={localeSwitcherMessages}
                 onNavigate={closeAfterLocaleNavigation}
               />
+              <FeedSwitcher locale={locale} />
               <ThemeToggle messages={themeToggleMessages} />
             </div>
           </div>
