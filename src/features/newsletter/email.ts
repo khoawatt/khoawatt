@@ -9,7 +9,7 @@ export interface NewsletterEmail {
   to: string;
 }
 
-const fromFallback = "QVAK Portfolio <portfolio@feaon.com>";
+const fromFallback = "Khoa Watt <portfolio@feaon.com>";
 
 export function getNewsletterFromAddress(): string {
   return process.env.NEWSLETTER_FROM_EMAIL ?? process.env.CONTACT_FROM_EMAIL ?? fromFallback;
@@ -34,9 +34,7 @@ export function buildNewsletterConfirmationEmail(
 
   const isVi = locale === "vi";
 
-  const subject = isVi
-    ? "Bạn đã đăng ký — QVAK Portfolio"
-    : "You’re subscribed — QVAK Portfolio";
+  const subject = isVi ? "Bạn đã đăng ký — Khoa Watt" : "You’re subscribed — Khoa Watt";
 
   const title = isVi ? "Cảm ơn bạn đã đăng ký!" : "Thanks for subscribing!";
   const intro = isVi
@@ -69,7 +67,7 @@ export function buildNewsletterConfirmationEmail(
 <body style="margin:0;padding:0;background:#161513;font-family:Arial,Helvetica,sans-serif;color:#F5F1EA;">
   <div style="max-width:640px;margin:0 auto;padding:32px 24px;">
     <div style="border-left:4px solid #C8963E;padding-left:16px;margin-bottom:24px;">
-      <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#E0B763;font-weight:700;">QVAK · QVAK Portfolio</div>
+      <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#E0B763;font-weight:700;">Khoa Watt</div>
       <div style="font-size:22px;font-weight:700;margin-top:6px;line-height:1.2;">${escapeHtml(title)}</div>
     </div>
     <div style="background:#1E1C1A;border:1px solid #2A2826;border-radius:16px;padding:24px;line-height:1.65;color:#C9C4B8;">
