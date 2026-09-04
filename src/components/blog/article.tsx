@@ -3,10 +3,13 @@ import Link from "next/link";
 
 import { Container } from "@/components/layout/container";
 import { getPortfolioProfile } from "@/content/profile";
+import { getTipContent } from "@/content/tip";
 import type { PostDetail } from "@/features/blog/types";
 import type { Locale } from "@/features/i18n/config";
 import type { BlogMessages } from "@/features/i18n/messages/types";
 import { getLocalizedPathname } from "@/features/i18n/routing";
+
+import { MomoQrTrigger } from "@/components/tip/momo-qr-trigger";
 
 import { MarkdownCopyButton } from "./markdown-copy-button";
 import { PostCard } from "./post-card";
@@ -176,6 +179,35 @@ export function Article({ locale, messages, post }: Readonly<ArticleProps>) {
             className="blog-article__prose"
             dangerouslySetInnerHTML={{ __html: post.html }}
           />
+
+          <footer className="mt-4 flex flex-col items-center gap-3 border-t border-[var(--color-border)] pt-4 text-[var(--color-text-muted)] transition-colors sm:flex-row sm:flex-nowrap sm:items-center sm:gap-4">
+            <div className="whitespace-nowrap text-sm font-medium">{getTipContent(locale).label}</div>
+            <ul className="flex flex-row flex-nowrap items-center gap-4">
+              <li className="shrink-0">
+                <a
+                  href={getTipContent(locale).links.find((l) => l.id === "buymeacoffee")?.href ?? "https://www.buymeacoffee.com/khoawatt"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block shrink-0 rounded bg-white p-1 shadow-sm"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    alt="Buy Me a Coffee"
+                    src="/images/brand/bmc-logo.svg"
+                    className="h-6 w-auto shrink-0"
+                  />
+                </a>
+              </li>
+              {/* kofi hidden temporarily — restore block above */}
+              <li className="shrink-0">
+                <MomoQrTrigger
+                  href={getTipContent(locale).links.find((l) => l.id === "momo")?.href ?? "/images/tip/momo-qr.jpg"}
+                  label="Momo"
+                  variant="article-text"
+                />
+              </li>
+            </ul>
+          </footer>
 
         </div>
       </div>
