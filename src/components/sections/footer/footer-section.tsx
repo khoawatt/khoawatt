@@ -163,8 +163,8 @@ export function FooterSection({
         </div>
 
         <div className="site-footer__bottom">
-          <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-4">
-            <p className="site-footer__copyright">
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-6">
+            <p className="site-footer__copyright shrink-0 whitespace-nowrap text-center sm:text-left">
               © {year} {content.brand.name}. {content.bottom.rights}
             </p>
             <FooterTip tip={content.tip} />
