@@ -49,13 +49,11 @@ const tipCopy = {
     },
     momo: {
       label: { en: "MoMo", vi: "MoMo" } satisfies LocalizedText,
-      // TODO: replace with real MoMo QR / me.momo.vn link
-      href: "https://me.momo.vn/khoawatt",
+      href: "https://nhantien.momo.vn/khoawatt",
     },
     zalopay: {
-      label: { en: "ZaloPay", vi: "ZaloPay" } satisfies LocalizedText,
-      // TODO: replace with real ZaloPay QR / payment link
-      href: "https://zalopay.vn/khoawatt",
+      label: { en: "Zalo Pay", vi: "Zalo Pay" } satisfies LocalizedText,
+      href: "https://provinces.open-api.vn/img/Quan-ZaloPay.jpg",
     },
   },
 } as const;

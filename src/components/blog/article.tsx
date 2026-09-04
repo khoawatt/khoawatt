@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { Container } from "@/components/layout/container";
 import { getPortfolioProfile } from "@/content/profile";
+import { getTipContent } from "@/content/tip";
 import type { PostDetail } from "@/features/blog/types";
 import type { Locale } from "@/features/i18n/config";
 import type { BlogMessages } from "@/features/i18n/messages/types";
@@ -176,6 +177,65 @@ export function Article({ locale, messages, post }: Readonly<ArticleProps>) {
             className="blog-article__prose"
             dangerouslySetInnerHTML={{ __html: post.html }}
           />
+
+          <footer className="mt-4 flex flex-col items-center space-y-4 border-t border-[var(--color-border)] pt-4 text-[var(--color-text-muted)] transition-colors sm:flex-row sm:space-x-4 sm:space-y-0">
+            <div className="text-sm font-medium">{getTipContent(locale).label}</div>
+            <ul className="flex flex-row items-center space-x-4">
+              <li>
+                <a
+                  href={getTipContent(locale).links.find((l) => l.id === "buymeacoffee")?.href ?? "https://www.buymeacoffee.com/khoawatt"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    alt="Buy Me a Coffee"
+                    src="/images/brand/bmc-logo.svg"
+                    className="h-8 w-auto rounded bg-current p-1 text-[var(--color-surface)]"
+                    style={{ backgroundColor: "currentColor" }}
+                  />
+                </a>
+              </li>
+              <li>
+                <a
+                  href={getTipContent(locale).links.find((l) => l.id === "kofi")?.href ?? "https://ko-fi.com/khoawatt"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    alt="Ko-fi"
+                    src="https://storage.ko-fi.com/cdn/brandasset/v2/kofi_logo.png"
+                    height={16}
+                    width={64}
+                    className="h-4 w-16 object-contain"
+                  />
+                </a>
+              </li>
+              <li>
+                <a
+                  href={getTipContent(locale).links.find((l) => l.id === "momo")?.href ?? "https://nhantien.momo.vn/khoawatt"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium transition-colors hover:opacity-80"
+                  style={{ color: "#ec4899" }}
+                >
+                  Momo
+                </a>
+              </li>
+              <li>
+                <a
+                  href={getTipContent(locale).links.find((l) => l.id === "zalopay")?.href ?? "https://provinces.open-api.vn/img/Quan-ZaloPay.jpg"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium transition-colors hover:opacity-80"
+                  style={{ color: "var(--color-accent)" }}
+                >
+                  Zalo Pay
+                </a>
+              </li>
+            </ul>
+          </footer>
 
         </div>
       </div>
