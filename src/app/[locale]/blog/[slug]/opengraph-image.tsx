@@ -79,7 +79,7 @@ export default async function OpengraphImage({
           }}
         >
           <span style={{ color: "#E0B763", fontSize: 34, fontWeight: 700, letterSpacing: 2 }}>
-            QVAK
+            Khoa Watt
           </span>
           <span style={{ color: "#8A867E", fontSize: 24 }}>·</span>
           <span style={{ color: "#C9C4B8", fontSize: 24 }}>{messages.metadata.title}</span>

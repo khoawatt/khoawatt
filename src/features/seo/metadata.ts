@@ -34,6 +34,13 @@ export interface SeoMetadataInput {
   robots?: Metadata["robots"];
 }
 
+function sanitizeDescription(value: string): string {
+  // Strip HTML, collapse whitespace, truncate to ~160 chars for meta
+  const plain = value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  if (plain.length <= 165) return plain;
+  return `${plain.slice(0, 162).trimEnd()}…`;
+}
+
 export function getSeoMetadata({
   locale,
   title,
@@ -45,13 +52,14 @@ export function getSeoMetadata({
 }: SeoMetadataInput): Metadata {
   const canonicalPath = getLocalizedPathname(pathname, locale);
   const url = getAbsoluteUrl(canonicalPath);
-  const profile = getPortfolioProfile(locale);
-  const ogImage = getAbsoluteUrl(profile.hero.image.src);
+  // Default OG image is the file-based route at /[locale]/opengraph-image (1200x630, 1.91:1)
+  const defaultOgImage = getAbsoluteUrl(getLocalizedPathname("/opengraph-image", locale));
+  const sanitizedDescription = sanitizeDescription(description);
 
   return {
     metadataBase: new URL(getSiteUrl()),
     title,
-    description,
+    description: sanitizedDescription,
     alternates: {
       canonical: canonicalPath,
       languages: getAlternateLanguages(pathname),
@@ -66,18 +74,18 @@ export function getSeoMetadata({
         type: "website",
         locale: ogLocaleBySiteLocale[locale],
         url,
-        siteName: title,
+        siteName: "Khoa Watt",
         title,
-        description,
-        images: [{ url: ogImage, width: 852, height: 1280, alt: profile.hero.image.alt }],
+        description: sanitizedDescription,
+        images: [{ url: defaultOgImage, width: 1200, height: 630, alt: title }],
       },
     twitter:
       twitter ??
       {
-        card: "summary",
+        card: "summary_large_image",
         title,
-        description,
-        images: [ogImage],
+        description: sanitizedDescription,
+        images: [defaultOgImage],
       },
   };
 }

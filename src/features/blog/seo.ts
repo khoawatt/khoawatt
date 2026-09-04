@@ -80,6 +80,12 @@ export function getBlogTagMetadata(
   });
 }
 
+function sanitizeSummary(value: string): string {
+  const plain = value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  if (plain.length <= 165) return plain;
+  return `${plain.slice(0, 162).trimEnd()}…`;
+}
+
 export function getBlogPostMetadata(
   locale: Locale,
   post: PostDetail,
@@ -91,13 +97,14 @@ export function getBlogPostMetadata(
   const dateModified = post.updatedAt
     ? new Date(post.updatedAt).toISOString()
     : datePublished;
+  const sanitizedSummary = sanitizeSummary(post.summary);
 
   // The OG image comes from the file-based `opengraph-image.tsx` (auto-generated
   // branded card, spec §7); no metadata image is set here to avoid duplication.
   return getSeoMetadata({
     locale,
     title: post.title,
-    description: post.summary,
+    description: sanitizedSummary,
     pathname,
     openGraph: {
       type: "article",
@@ -105,7 +112,7 @@ export function getBlogPostMetadata(
       url: getAbsoluteUrl(getLocalizedPathname(pathname, locale)),
       siteName: metadataTitle,
       title: post.title,
-      description: post.summary,
+      description: sanitizedSummary,
       publishedTime: datePublished,
       modifiedTime: dateModified,
       tags: post.tags.map((tag) => tag.name),
@@ -113,7 +120,7 @@ export function getBlogPostMetadata(
     twitter: {
       card: "summary_large_image",
       title: post.title,
-      description: post.summary,
+      description: sanitizedSummary,
     },
   });
 }
