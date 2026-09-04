@@ -163,10 +163,12 @@ export function FooterSection({
         </div>
 
         <div className="site-footer__bottom">
-          <p className="site-footer__copyright">
-            © {year} {content.brand.name}. {content.bottom.rights}
-          </p>
-          <FooterTip tip={content.tip} />
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <p className="site-footer__copyright">
+              © {year} {content.brand.name}. {content.bottom.rights}
+            </p>
+            <FooterTip tip={content.tip} />
+          </div>
           <BackToTop label={content.bottom.backToTop} />
         </div>
       </Container>

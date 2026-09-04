@@ -5,10 +5,8 @@ interface FooterTipProps {
 }
 
 export function FooterTip({ tip }: Readonly<FooterTipProps>) {
-  // Reference: https://quan.hoabinh.vn/post/2024/11/so-sanh-he-thong-kieu-cua-python-va-typescript?cat=internet-of-things
-  // <footer class="mt-4 pt-4 border-t flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 border-theme text-secondary">
   return (
-    <div className="mt-4 flex flex-col items-center space-y-4 border-t border-[var(--color-border)] pt-4 text-[var(--color-text-muted)] transition-colors sm:flex-row sm:space-x-4 sm:space-y-0">
+    <div className="flex flex-col items-center space-y-3 text-[var(--color-text-muted)] sm:flex-row sm:space-x-4 sm:space-y-0">
       <div className="text-sm font-medium">{tip.label}</div>
       <ul aria-label={tip.ariaLabel} className="flex flex-row items-center space-x-4">
         {tip.links.map((link) => {
@@ -20,14 +18,13 @@ export function FooterTip({ tip }: Readonly<FooterTipProps>) {
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block"
+                  className="block rounded bg-white p-1 shadow-sm"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     alt={link.label}
                     src="/images/brand/bmc-logo.svg"
-                    className="h-8 w-auto rounded bg-current p-1 text-[var(--color-surface)]"
-                    style={{ backgroundColor: "currentColor" }}
+                    className="h-6 w-auto"
                   />
                 </a>
               </li>

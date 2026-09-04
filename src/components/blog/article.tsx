@@ -186,13 +186,13 @@ export function Article({ locale, messages, post }: Readonly<ArticleProps>) {
                   href={getTipContent(locale).links.find((l) => l.id === "buymeacoffee")?.href ?? "https://www.buymeacoffee.com/khoawatt"}
                   target="_blank"
                   rel="noopener noreferrer"
+                  className="block rounded bg-white p-1 shadow-sm"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     alt="Buy Me a Coffee"
                     src="/images/brand/bmc-logo.svg"
-                    className="h-8 w-auto rounded bg-current p-1 text-[var(--color-surface)]"
-                    style={{ backgroundColor: "currentColor" }}
+                    className="h-6 w-auto"
                   />
                 </a>
               </li>
