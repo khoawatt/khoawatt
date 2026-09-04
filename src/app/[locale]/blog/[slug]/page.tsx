@@ -25,7 +25,17 @@ export async function generateMetadata({
   const messages = await getMessages(locale);
   const post = await getPostBySlug(locale, slug);
 
-  if (!post) return {};
+  if (!post) {
+    // Return safe defaults instead of empty metadata so crawlers get a canonical URL and OG
+    const { getSeoMetadata } = await import("@/features/seo/metadata");
+    return getSeoMetadata({
+      locale,
+      title: messages.metadata.title,
+      description: messages.metadata.description,
+      pathname: `/blog/${slug}`,
+      robots: { index: false, follow: true },
+    });
+  }
 
   return getBlogPostMetadata(locale, post, messages.blog, messages.metadata.title);
 }

@@ -11,6 +11,7 @@ import { getLocalizedPathname } from "@/features/i18n/routing";
 import { LocationDirectionsLink } from "@/features/geolocation/location-directions-link";
 
 import { BackToTop } from "./back-to-top";
+import { FooterTip } from "./footer-tip";
 import { NewsletterForm } from "./newsletter-form";
 
 interface FooterSectionProps {
@@ -157,7 +158,7 @@ export function FooterSection({
 
           <div className="site-footer__column">
             <h3 className="site-footer__heading">{content.newsletter.label}</h3>
-            <NewsletterForm content={content} />
+            <NewsletterForm content={content} locale={locale} />
           </div>
         </div>
 
@@ -165,6 +166,7 @@ export function FooterSection({
           <p className="site-footer__copyright">
             © {year} {content.brand.name}. {content.bottom.rights}
           </p>
+          <FooterTip tip={content.tip} />
           <BackToTop label={content.bottom.backToTop} />
         </div>
       </Container>

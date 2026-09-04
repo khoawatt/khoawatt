@@ -4,6 +4,7 @@ export interface ContactMessage {
   replyTo: string;
   subject: string;
   text: string;
+  html?: string;
 }
 
 export type DeliveryResult =
@@ -60,6 +61,7 @@ export function createResendDeliveryProvider(
             reply_to: message.replyTo,
             subject: message.subject,
             text: message.text,
+            ...(message.html ? { html: message.html } : {}),
           }),
           signal: controller.signal,
         });
