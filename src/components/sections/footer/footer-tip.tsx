@@ -71,7 +71,7 @@ export function FooterTip({ tip }: Readonly<FooterTipProps>) {
               </li>
             );
           }
-          // zalopay
+          // zalopay - blue like quan.hoabinh.vn
           return (
             <li key={link.id}>
               <a
@@ -80,7 +80,7 @@ export function FooterTip({ tip }: Readonly<FooterTipProps>) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm font-medium transition-colors hover:opacity-80"
-                style={{ color: "var(--color-accent)" }}
+                style={{ color: "#0B74E8" }}
               >
                 Zalo Pay
               </a>

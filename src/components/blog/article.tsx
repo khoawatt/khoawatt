@@ -229,7 +229,7 @@ export function Article({ locale, messages, post }: Readonly<ArticleProps>) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm font-medium transition-colors hover:opacity-80"
-                  style={{ color: "var(--color-accent)" }}
+                  style={{ color: "#0B74E8" }}
                 >
                   Zalo Pay
                 </a>
