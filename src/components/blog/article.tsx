@@ -215,24 +215,18 @@ export function Article({ locale, messages, post }: Readonly<ArticleProps>) {
               </li>
               <li className="shrink-0">
                 <a
-                  href={getTipContent(locale).links.find((l) => l.id === "momo")?.href ?? "https://nhantien.momo.vn/khoawatt"}
+                  href={getTipContent(locale).links.find((l) => l.id === "momo")?.href ?? "/images/tip/momo-qr.jpg"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="whitespace-nowrap text-sm font-medium transition-colors hover:opacity-80"
-                  style={{ color: "#ec4899" }}
+                  className="block overflow-hidden rounded bg-white p-1 shadow-sm"
+                  title="Momo"
                 >
-                  Momo
-                </a>
-              </li>
-              <li className="shrink-0">
-                <a
-                  href={getTipContent(locale).links.find((l) => l.id === "zalopay")?.href ?? "https://provinces.open-api.vn/img/Quan-ZaloPay.jpg"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="whitespace-nowrap text-sm font-medium transition-colors hover:opacity-80"
-                  style={{ color: "#0B74E8" }}
-                >
-                  Zalo Pay
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    alt="Momo"
+                    src={getTipContent(locale).links.find((l) => l.id === "momo")?.href ?? "/images/tip/momo-qr.jpg"}
+                    className="h-10 w-10 object-contain sm:h-8 sm:w-8"
+                  />
                 </a>
               </li>
             </ul>

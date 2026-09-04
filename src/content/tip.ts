@@ -2,7 +2,7 @@ import type { Locale } from "@/features/i18n/config";
 
 type LocalizedText = Readonly<Record<Locale, string>>;
 
-export type TipPlatform = "buymeacoffee" | "kofi" | "momo" | "zalopay";
+export type TipPlatform = "buymeacoffee" | "kofi" | "momo";
 
 export interface TipLinkView {
   id: TipPlatform;
@@ -49,21 +49,12 @@ const tipCopy = {
     },
     momo: {
       label: { en: "MoMo", vi: "MoMo" } satisfies LocalizedText,
-      href: "https://nhantien.momo.vn/khoawatt",
-    },
-    zalopay: {
-      label: { en: "Zalo Pay", vi: "Zalo Pay" } satisfies LocalizedText,
-      href: "https://provinces.open-api.vn/img/Quan-ZaloPay.jpg",
+      href: "/images/tip/momo-qr.jpg",
     },
   },
 } as const;
 
-const tipOrder: readonly TipPlatform[] = [
-  "buymeacoffee",
-  "kofi",
-  "momo",
-  "zalopay",
-];
+const tipOrder: readonly TipPlatform[] = ["buymeacoffee", "kofi", "momo"];
 
 export function getTipContent(locale: Locale): TipContentView {
   const localized = (text: LocalizedText) => text[locale];

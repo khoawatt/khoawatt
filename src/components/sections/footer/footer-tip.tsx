@@ -52,23 +52,7 @@ export function FooterTip({ tip }: Readonly<FooterTipProps>) {
               </li>
             );
           }
-          if (link.id === "momo") {
-            return (
-              <li key={link.id} className="shrink-0">
-                <a
-                  aria-label={link.label}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="whitespace-nowrap text-sm font-medium transition-colors hover:opacity-80"
-                  style={{ color: "#ec4899" }}
-                >
-                  Momo
-                </a>
-              </li>
-            );
-          }
-          // zalopay - blue like quan.hoabinh.vn
+          // momo - QR image provided by owner (/home/audition/momo.jpg -> /images/tip/momo-qr.jpg)
           return (
             <li key={link.id} className="shrink-0">
               <a
@@ -76,10 +60,15 @@ export function FooterTip({ tip }: Readonly<FooterTipProps>) {
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="whitespace-nowrap text-sm font-medium transition-colors hover:opacity-80"
-                style={{ color: "#0B74E8" }}
+                className="block overflow-hidden rounded bg-white p-1 shadow-sm"
+                title={link.label}
               >
-                Zalo Pay
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  alt={link.label}
+                  src={link.href}
+                  className="h-10 w-10 object-contain sm:h-8 sm:w-8"
+                />
               </a>
             </li>
           );
