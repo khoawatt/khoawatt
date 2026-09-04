@@ -54,7 +54,8 @@ const tipCopy = {
   },
 } as const;
 
-const tipOrder: readonly TipPlatform[] = ["buymeacoffee", "kofi", "momo"];
+// kofi hidden temporarily — restore by adding "kofi" back
+const tipOrder: readonly TipPlatform[] = ["buymeacoffee", "momo"];
 
 export function getTipContent(locale: Locale): TipContentView {
   const localized = (text: LocalizedText) => text[locale];

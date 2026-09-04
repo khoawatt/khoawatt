@@ -4090,6 +4090,10 @@ video {
   }
 }
 
+.momo-qr-dialog::backdrop {
+  background: rgb(0 0 0 / 0.55);
+}
+
 
 /* Form page: back link + card container */
 .admin-back-link {

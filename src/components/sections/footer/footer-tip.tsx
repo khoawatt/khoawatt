@@ -1,5 +1,7 @@
 import type { TipContentView } from "@/content/tip";
 
+import { MomoQrTrigger } from "@/components/tip/momo-qr-trigger";
+
 interface FooterTipProps {
   tip: TipContentView;
 }
@@ -52,24 +54,10 @@ export function FooterTip({ tip }: Readonly<FooterTipProps>) {
               </li>
             );
           }
-          // momo - QR image provided by owner (/home/audition/momo.jpg -> /images/tip/momo-qr.jpg)
+          // momo - keep text "MoMo" (pill) and show QR in dialog on click
           return (
             <li key={link.id} className="shrink-0">
-              <a
-                aria-label={link.label}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block overflow-hidden rounded bg-white p-1 shadow-sm"
-                title={link.label}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  alt={link.label}
-                  src={link.href}
-                  className="h-10 w-10 object-contain sm:h-8 sm:w-8"
-                />
-              </a>
+              <MomoQrTrigger href={link.href} label={link.label} variant="footer-pill" />
             </li>
           );
         })}

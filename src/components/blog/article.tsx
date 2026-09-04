@@ -9,6 +9,8 @@ import type { Locale } from "@/features/i18n/config";
 import type { BlogMessages } from "@/features/i18n/messages/types";
 import { getLocalizedPathname } from "@/features/i18n/routing";
 
+import { MomoQrTrigger } from "@/components/tip/momo-qr-trigger";
+
 import { MarkdownCopyButton } from "./markdown-copy-button";
 import { PostCard } from "./post-card";
 import { TableOfContents } from "./table-of-contents";
@@ -196,38 +198,13 @@ export function Article({ locale, messages, post }: Readonly<ArticleProps>) {
                   />
                 </a>
               </li>
+              {/* kofi hidden temporarily — restore block above */}
               <li className="shrink-0">
-                <a
-                  href={getTipContent(locale).links.find((l) => l.id === "kofi")?.href ?? "https://ko-fi.com/khoawatt"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block shrink-0"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    alt="Ko-fi"
-                    src="https://storage.ko-fi.com/cdn/brandasset/v2/kofi_logo.png"
-                    height={16}
-                    width={64}
-                    className="h-4 w-16 shrink-0 object-contain"
-                  />
-                </a>
-              </li>
-              <li className="shrink-0">
-                <a
+                <MomoQrTrigger
                   href={getTipContent(locale).links.find((l) => l.id === "momo")?.href ?? "/images/tip/momo-qr.jpg"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block overflow-hidden rounded bg-white p-1 shadow-sm"
-                  title="Momo"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    alt="Momo"
-                    src={getTipContent(locale).links.find((l) => l.id === "momo")?.href ?? "/images/tip/momo-qr.jpg"}
-                    className="h-10 w-10 object-contain sm:h-8 sm:w-8"
-                  />
-                </a>
+                  label="Momo"
+                  variant="article-text"
+                />
               </li>
             </ul>
           </footer>
